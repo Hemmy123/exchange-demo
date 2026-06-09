@@ -1,5 +1,7 @@
 #include "OrderBook.h"
+#include "Types.h"
 
+#include <execution>
 #include <optional>
 #include <print>
 
@@ -10,7 +12,8 @@ std::optional<Price> OrderBook::BestBid() const {
     return {};
   }
 
-  return m_bidsMap.begin()->first;
+  // highest price = best bid
+  return m_bidsMap.rbegin()->first;
 }
 
 std::optional<Price> OrderBook::BestAsk() const {
@@ -18,11 +21,11 @@ std::optional<Price> OrderBook::BestAsk() const {
     return {};
   }
 
-  // return m_askMap.end()->first;
+  // lowest price = best ask
   return m_askMap.begin()->first;
 }
 
-std::optional<int> OrderBook::Spread() const {
+std::optional<Price> OrderBook::Spread() const {
   auto bestBid = BestBid();
   auto bestAsk = BestAsk();
 
@@ -37,37 +40,53 @@ std::optional<int> OrderBook::Spread() const {
              static_cast<int>(bestAsk.value()));
 }
 
-void OrderBook::Ask(const AskOrderParams &params) {
+void OrderBook::PlaceOrder(const Side side, OrderParams params) {
+  auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
+  AddToSide(book, side, params);
+}
 
-  // if a price already exists at this price, we want to
-  // add it to the end of the list. Orders at the same price
-  // should priortize earlier orders first.
-  if (m_askMap.contains(params.price)) {
-    auto &orderList = m_askMap.at(params.price);
-    orderList.push_back({params.id, params.price, params.qty});
+void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
+                       std::optional<Quantity> newQty) {
+
+  if (m_orders_map.contains(id) == false) {
+    // TODO: Log warning here.
     return;
   }
 
-  Order newAsk = {.id = params.id, .price = params.price, .qty = params.qty};
-  m_askMap[params.price] = OrderList{newAsk};
-}
+  // Remove and reinsert for new price
+  const auto &orderLocation = m_orders_map.at(id);
+  const auto oldPrice = orderLocation.orderIt->price;
+  const auto oldQty = orderLocation.orderIt->qty;
 
-void OrderBook::Bid(const BidOrderParams &params) {
+  Order modifiedOrder{.id = id, .price = oldPrice, .qty = oldQty};
 
-  // if a price already exists at this price, we want to
-  // add it to the end of the list. Orders at the same price
-  // should priortize earlier orders first.
-  if (m_bidsMap.contains(params.price)) {
-    auto &orderList = m_bidsMap.at(params.price);
-    orderList.push_back({params.id, params.price, params.qty});
+  bool modified = false;
+  if (newPrice.has_value() && *newPrice != oldPrice) {
+    modifiedOrder.price = *newPrice;
+    modified = true;
+  }
+
+  if (newQty.has_value() && *newQty != oldQty) {
+    modifiedOrder.qty = *newQty;
+    modified = true;
+  }
+
+  if (!modified) {
     return;
   }
 
-  Order newBid = {.id = params.id, .price = params.price, .qty = params.qty};
-  m_bidsMap[params.price] = OrderList{newBid};
+  auto &list = orderLocation.levelIter->second;
+  list.erase(orderLocation.orderIt);
+
+  auto &book = (orderLocation.side == Side::Ask) ? m_askMap : m_bidsMap;
+  if (book.contains(modifiedOrder.price)) {
+    book[modifiedOrder.price].push_back(modifiedOrder);
+  }
 }
 
-void OrderBook::Print() {
+void OrderBook::Delete(const OrderId id) {}
+
+void OrderBook::Print() const {
   std::print("--- Bids ---\n");
   for (auto elem : m_bidsMap) {
 

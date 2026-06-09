@@ -18,33 +18,33 @@ void OrderBookTest() {
 
   OrderId orderId = 0;
 
-  AskOrderParams order1{.id = orderId++, .price = 100, .qty = 532};
-  AskOrderParams order2{.id = orderId++, .price = 100, .qty = 431};
-  AskOrderParams order3{.id = orderId++, .price = 400, .qty = 130};
-  AskOrderParams order4{.id = orderId++, .price = 500, .qty = 432};
-  AskOrderParams order5{.id = orderId++, .price = 400, .qty = 230};
-  AskOrderParams order6{.id = orderId++, .price = 100, .qty = 312};
+  OrderParams order1{.id = orderId++, .price = 100, .qty = 532};
+  OrderParams order2{.id = orderId++, .price = 100, .qty = 431};
+  OrderParams order3{.id = orderId++, .price = 400, .qty = 130};
+  OrderParams order4{.id = orderId++, .price = 500, .qty = 432};
+  OrderParams order5{.id = orderId++, .price = 400, .qty = 230};
+  OrderParams order6{.id = orderId++, .price = 100, .qty = 312};
 
-  BidOrderParams bidOrder1{.id = orderId++, .price = 100, .qty = 100};
-  BidOrderParams bidOrder2{.id = orderId++, .price = 200, .qty = 320};
-  BidOrderParams bidOrder3{.id = orderId++, .price = 200, .qty = 102};
-  BidOrderParams bidOrder4{.id = orderId++, .price = 400, .qty = 132};
-  BidOrderParams bidOrder5{.id = orderId++, .price = 400, .qty = 134};
-  BidOrderParams bidOrder6{.id = orderId++, .price = 100, .qty = 243};
+  OrderParams bidOrder1{.id = orderId++, .price = 100, .qty = 100};
+  OrderParams bidOrder2{.id = orderId++, .price = 200, .qty = 320};
+  OrderParams bidOrder3{.id = orderId++, .price = 200, .qty = 102};
+  OrderParams bidOrder4{.id = orderId++, .price = 400, .qty = 132};
+  OrderParams bidOrder5{.id = orderId++, .price = 400, .qty = 134};
+  OrderParams bidOrder6{.id = orderId++, .price = 100, .qty = 243};
 
-  orderBook.ProcessOperation<Operation::Ask>(order1);
-  orderBook.ProcessOperation<Operation::Ask>(order2);
-  orderBook.ProcessOperation<Operation::Ask>(order3);
-  orderBook.ProcessOperation<Operation::Ask>(order4);
-  orderBook.ProcessOperation<Operation::Ask>(order5);
-  orderBook.ProcessOperation<Operation::Ask>(order6);
+  orderBook.PlaceOrder(Side::Ask, order1);
+  orderBook.PlaceOrder(Side::Ask, order2);
+  orderBook.PlaceOrder(Side::Ask, order3);
+  orderBook.PlaceOrder(Side::Ask, order4);
+  orderBook.PlaceOrder(Side::Ask, order5);
+  orderBook.PlaceOrder(Side::Ask, order6);
 
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder1);
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder2);
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder3);
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder4);
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder5);
-  orderBook.ProcessOperation<Operation::Bid>(bidOrder6);
+  orderBook.PlaceOrder(Side::Bid, bidOrder1);
+  orderBook.PlaceOrder(Side::Bid, bidOrder2);
+  orderBook.PlaceOrder(Side::Bid, bidOrder3);
+  orderBook.PlaceOrder(Side::Bid, bidOrder4);
+  orderBook.PlaceOrder(Side::Bid, bidOrder5);
+  orderBook.PlaceOrder(Side::Bid, bidOrder6);
 
   orderBook.Print();
 
@@ -60,15 +60,13 @@ void OrderBookTest() {
 
     std::print("Spread: {} \n", spread.value());
   }
-}
+  std::print("----------------\n");
 
-void testFunc() {
-  vector<int> myVec;
-  myVec.push_back(20);
+  orderBook.Modify(5, 400, 1232131);
+  orderBook.Print();
 }
 
 int main() {
   OrderBookTest();
-  cout << "hello world" << '\n';
   return 0;
 }

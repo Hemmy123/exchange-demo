@@ -1,45 +1,22 @@
 #pragma once
 
 #include "Types.h"
+#include "Utils.h"
 
 #include <concepts>
+#include <execution>
 #include <functional>
 #include <list>
 #include <map>
 #include <optional>
 #include <unordered_map>
 
-enum class Operation { Bid, Ask, Modify, Delete, Print };
+enum class Side { Bid, Ask };
 
-// ------ Order Book Operations ----- //
-//
-struct OrderBookOperations {};
-
-template <typename T>
-concept OrderBookParams = std::derived_from<T, OrderBookOperations>;
-
-struct AskOrderParams : OrderBookOperations {
+struct OrderParams {
   OrderId id;
   Price price;
   Quantity qty;
-};
-
-struct BidOrderParams : OrderBookOperations {
-  OrderId id;
-  Price price;
-  Quantity qty;
-};
-
-struct ModifyParams : OrderBookOperations {
-  OrderId id;
-
-  // null price/quantity will result in no change
-  std::optional<Price> newPrice;
-  std::optional<Quantity> newQuantity;
-};
-
-struct DeleteParam : OrderBookOperations {
-  OrderId id;
 };
 
 // ----- Order Book ---- //
@@ -53,53 +30,60 @@ struct Order {
 
 class OrderBook {
 public:
-  OrderBook(const OrderBook &) = default;
-  OrderBook(OrderBook &&) = default;
-  OrderBook &operator=(const OrderBook &) = default;
-  OrderBook &operator=(OrderBook &&) = default;
   OrderBook(InstrumentId instrumentId) : m_instrument(instrumentId) {};
 
-  template <Operation op, typename Params>
-  void ProcessOperation(Params &&params) {
-    if constexpr (op == Operation::Bid) {
-      return Bid(params);
-    } else if constexpr (op == Operation::Ask) {
-      return Ask(params);
-    } else if constexpr (op == Operation::Modify) {
-      return Modify(params);
-    } else if constexpr (op == Operation::Delete) {
-      return Delete(params);
-    } else if constexpr (op == Operation::Print) {
-    } else {
-      static_assert(false, "Unhandle Orderbook Operation");
-    }
-  }
+  MOVE_ONLY(OrderBook)
+
+  void Modify(const OrderId id, std::optional<Price> newPrice,
+              std::optional<Quantity> newQuantity);
+
+  void Delete(const OrderId id);
+
+  void PlaceOrder(const Side side, OrderParams params);
 
   // Returns the bid at the highest price
   std::optional<Price> BestBid() const;
 
-  // Returns the bid at the lowest price
+  // Returns the ask at the lowest price
   std::optional<Price> BestAsk() const;
 
-  std::optional<int> Spread() const;
+  std::optional<Price> Spread() const;
 
-  void Print();
+  void Print() const;
 
 private:
-  void Ask(const AskOrderParams &params);
-  void Bid(const BidOrderParams &params);
-  void Modify(const ModifyParams &params);
-  void Delete(const DeleteParam &params);
+  using OrderList = std::list<Order>;
 
   InstrumentId m_instrument;
 
-  OrderId m_idCounter;
-
-  using OrderList = std::list<Order>;
-
-  std::map<Price, OrderList, std::greater<>> m_bidsMap;
+  // NOTE: Use reverse iterators with this! Not using std::greater<>
+  // to keep the types of the 2 makes the same
+  std::map<Price, OrderList> m_bidsMap;
 
   std::map<Price, OrderList> m_askMap;
 
-  std::unordered_map<OrderId, OrderList::iterator> m_order_map;
+  struct OrderLocation {
+    Side side;
+    std::map<Price, OrderList>::iterator levelIter;
+    OrderList::iterator orderIt;
+  };
+
+  std::unordered_map<OrderId, OrderLocation> m_orders_map;
+
+  template <typename BookSide>
+  void AddToSide(BookSide &book, Side side, const OrderParams params);
 };
+
+// ====== template definitions ===== //
+
+template <typename BookSide>
+void OrderBook::AddToSide(BookSide &book, Side side, const OrderParams params) {
+  auto priceLevelIter = book.try_emplace(params.price).first;
+  auto &priceList = priceLevelIter->second;
+  priceList.emplace_back(params.id, params.price, params.qty);
+
+  m_orders_map[params.id] =
+      OrderLocation{.side = side,
+                    .levelIter = priceLevelIter,
+                    .orderIt = std::prev(priceList.end())};
+}
