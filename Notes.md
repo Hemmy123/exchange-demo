@@ -11,6 +11,8 @@ An order book needs to be able to hand the following situations
 - 
 
 
+### AI Assisted areas
+- CMake files
 
 
 ### Glossary
