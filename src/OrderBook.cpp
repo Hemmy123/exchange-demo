@@ -55,36 +55,48 @@ void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
 
   // Remove and reinsert for new price
   const auto &orderLocation = m_orders_map.at(id);
-  const auto oldPrice = orderLocation.orderIt->price;
-  const auto oldQty = orderLocation.orderIt->qty;
-
-  Order modifiedOrder{.id = id, .price = oldPrice, .qty = oldQty};
+  const auto side = orderLocation.side;
+  auto price = orderLocation.orderIt->price;
+  auto qty = orderLocation.orderIt->qty;
 
   bool modified = false;
-  if (newPrice.has_value() && *newPrice != oldPrice) {
-    modifiedOrder.price = *newPrice;
+
+  if (newPrice.has_value() && *newPrice != price) {
+    price = *newPrice;
     modified = true;
   }
 
-  if (newQty.has_value() && *newQty != oldQty) {
-    modifiedOrder.qty = *newQty;
+  if (newQty.has_value() && *newQty != qty) {
+    qty = *newQty;
     modified = true;
   }
 
   if (!modified) {
+    // TODO: Add warning here
     return;
   }
 
-  auto &list = orderLocation.levelIter->second;
-  list.erase(orderLocation.orderIt);
+  // Erase the old order so we can readd the new one.
+  Delete(id);
 
   auto &book = (orderLocation.side == Side::Ask) ? m_askMap : m_bidsMap;
-  if (book.contains(modifiedOrder.price)) {
-    book[modifiedOrder.price].push_back(modifiedOrder);
-  }
+  AddToSide(book, side, {.id = id, .price = price, .qty = qty});
 }
 
-void OrderBook::Delete(const OrderId id) {}
+void OrderBook::Delete(const OrderId id) {
+
+  // make a separate DeleteInternal for both delete and Modify to use?
+  if (m_orders_map.contains(id) == false) {
+    // TODO: Log warning here.
+    return;
+  }
+
+  // Remove and reinsert for new price
+  const auto &orderLocation = m_orders_map.at(id);
+  auto &list = orderLocation.levelIter->second;
+  list.erase(orderLocation.orderIt);
+  m_orders_map.erase(id);
+}
 
 void OrderBook::Print() const {
   std::print("--- Bids ---\n");
