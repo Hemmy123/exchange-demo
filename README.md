@@ -6,6 +6,12 @@ A from-scratch limit order book and matching engine in modern C++, structured as
 
 Work in progress. The order book core is in place; the matching engine and market-data path are being built out. The goal is to work on functionality and correctness and then performance
 
+## Notes on AI Usage:
+
+The project was created to assist in learning, as such AI was not used to generate the code. However it was used in other areas lists below:
+
+- CMake configuration. I've had experiences using other build systems in the past, but surprisingly CMAKE is a new experience for me. Since I wanted to focus on the C++ and low level machine knowledge, AI assistance was used to help create the CMAKE scripts
+
 ## Building
 
 Requires CMake (3.28+) and a C++26-capable compiler (GCC 16+).
