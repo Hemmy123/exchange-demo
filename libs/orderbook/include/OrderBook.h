@@ -61,8 +61,6 @@ private:
 
   InstrumentId m_instrument;
 
-  // NOTE: Use reverse iterators with this! Not using std::greater<>
-  // to keep the types of the 2 makes the same
   std::map<Price, OrderList> m_bidsMap;
 
   std::map<Price, OrderList> m_askMap;
