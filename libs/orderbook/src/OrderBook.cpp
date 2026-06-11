@@ -1,7 +1,6 @@
 #include "OrderBook.h"
 #include "Types.h"
 
-#include <execution>
 #include <optional>
 #include <print>
 
@@ -23,6 +22,22 @@ std::optional<Price> OrderBook::BestAsk() const {
 
   // lowest price = best ask
   return m_askMap.begin()->first;
+}
+
+std::optional<Order> OrderBook::BestBidOrder() const {
+  if (m_askMap.empty()) {
+    return {};
+  }
+
+  return m_bidsMap.rbegin()->second.front();
+}
+
+std::optional<Order> OrderBook::BestAskOrder() const {
+  if (m_askMap.empty()) {
+    return {};
+  }
+
+  return m_askMap.begin()->second.front();
 }
 
 std::optional<Price> OrderBook::Spread() const {

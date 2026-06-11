@@ -44,6 +44,14 @@ public:
   // Returns the ask at the lowest price
   std::optional<Price> BestAsk() const;
 
+  // Returns the order at the highest price
+  // that was made earliest in the queue
+  std::optional<Order> BestBidOrder() const;
+
+  // Returns the order with the lowest price
+  // that was made earliest in the queue
+  std::optional<Order> BestAskOrder() const;
+
   std::optional<Price> Spread() const;
 
   void Print() const;
