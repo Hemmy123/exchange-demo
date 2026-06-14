@@ -1,6 +1,7 @@
 #include "OrderBook.h"
 #include "Types.h"
 
+#include <numeric>
 #include <optional>
 #include <print>
 
@@ -69,7 +70,9 @@ void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
   }
 
   // Remove and reinsert for new price
-  const auto &orderLocation = m_orders_map.at(id);
+  const auto orderLocation = m_orders_map.at(id);
+
+  // Doing some extra copies here that we could optimize out...
   const auto side = orderLocation.side;
   auto price = orderLocation.orderIt->price;
   auto qty = orderLocation.orderIt->qty;
@@ -91,10 +94,10 @@ void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
     return;
   }
 
-  // Erase the old order so we can readd the new one.
+  // Erase the old order so we can read the new one.
   Delete(id);
 
-  auto &book = (orderLocation.side == Side::Ask) ? m_askMap : m_bidsMap;
+  auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
   AddToSide(book, side, {.id = id, .price = price, .qty = qty});
 }
 
@@ -111,6 +114,27 @@ void OrderBook::Delete(const OrderId id) {
   auto &list = orderLocation.levelIter->second;
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
+}
+
+std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
+  const auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
+
+  if (book.contains(price) == false) {
+    return {};
+  }
+
+  const auto &priceList = book.at(price);
+
+  return std::accumulate(
+      priceList.cbegin(), priceList.cend(), 0,
+      [](Quantity sum, const Order &order) { return sum + order.qty; });
+}
+
+bool OrderBook::Contains(OrderId orderId) const {
+  // Note: We assume that m_order_maps will always be insync and contain
+  // all the order IDs for both ask and buy books. If this goes out of
+  // sync then we're in big trouble
+  return m_orders_map.contains(orderId);
 }
 
 void OrderBook::Print() const {

@@ -23,7 +23,11 @@ struct Order {
   OrderId id;
   Price price;
   Quantity qty;
+
+  bool operator==(const Order &) const = default;
 };
+
+using OrderList = std::list<Order>;
 
 class OrderBook {
 public:
@@ -52,13 +56,17 @@ public:
   // that was made earliest in the queue
   std::optional<Order> BestAskOrder() const;
 
+  // Sums all the prices for a particular level
+  std::optional<Quantity> QuantityAtPrice(Side side, Price price);
+
+  // Checks if the order exists in either ask or bid side.
+  bool Contains(OrderId) const;
+
   std::optional<Price> Spread() const;
 
   void Print() const;
 
 private:
-  using OrderList = std::list<Order>;
-
   InstrumentId m_instrument;
 
   std::map<Price, OrderList> m_bidsMap;
@@ -75,6 +83,9 @@ private:
 
   template <typename BookSide>
   void AddToSide(BookSide &book, Side side, const OrderParams params);
+
+  // To enable whitebox testing of order book.
+  friend struct OrderBookTestPeer;
 };
 
 // ====== template definitions ===== //

@@ -1,38 +1,94 @@
 #include "OrderBook.h"
+#include "Types.h"
 #include <array>
 #include <gtest/gtest.h>
+#include <optional>
 
 // ------------------ Default dataset ---------------------------//
 
-OrderId orderId = 0;
+namespace {
 
-auto getDefaultAskOrders() {
+OrderId g_orderId = 0;
+
+// Creates a new book and resets global order id to 0
+OrderBook InitBook() {
+  constexpr InstrumentId instrument = 1;
+  OrderBook newBook(instrument);
+  g_orderId = 0;
+  return newBook;
+}
+
+auto GetDefaultAskOrders() {
   std::array<OrderParams, 6> askOrders{
-      {{.id = orderId++, .price = 100, .qty = 532},
-       {.id = orderId++, .price = 100, .qty = 431},
-       {.id = orderId++, .price = 300, .qty = 312},
-       {.id = orderId++, .price = 300, .qty = 130},
-       {.id = orderId++, .price = 400, .qty = 432},
-       {.id = orderId++, .price = 400, .qty = 230}}};
+      {{.id = g_orderId++, .price = 100, .qty = 532},
+       {.id = g_orderId++, .price = 100, .qty = 431},
+       {.id = g_orderId++, .price = 300, .qty = 312},
+       {.id = g_orderId++, .price = 300, .qty = 130},
+       {.id = g_orderId++, .price = 400, .qty = 432},
+       {.id = g_orderId++, .price = 400, .qty = 230}}};
   return askOrders;
 }
 
-auto getDefaultBidOrders() {
+auto GetDefaultBidOrders() {
   std::array<OrderParams, 6> bidOrders{
-      {{.id = orderId++, .price = 100, .qty = 100},
-       {.id = orderId++, .price = 200, .qty = 320},
-       {.id = orderId++, .price = 200, .qty = 102},
-       {.id = orderId++, .price = 400, .qty = 132},
-       {.id = orderId++, .price = 400, .qty = 134},
-       {.id = orderId++, .price = 100, .qty = 243}}};
+      {{.id = g_orderId++, .price = 100, .qty = 100},
+       {.id = g_orderId++, .price = 200, .qty = 320},
+       {.id = g_orderId++, .price = 200, .qty = 102},
+       {.id = g_orderId++, .price = 400, .qty = 132},
+       {.id = g_orderId++, .price = 400, .qty = 134},
+       {.id = g_orderId++, .price = 100, .qty = 243}}};
   return bidOrders;
 }
 
+void PlaceDefaultAskOrders(OrderBook &book) {
+  for (const auto &order : GetDefaultAskOrders()) {
+    book.PlaceOrder(Side::Ask, order);
+  }
+}
+
+void PlaceDefaultBidOrders(OrderBook &book) {
+  for (const auto &order : GetDefaultBidOrders()) {
+    book.PlaceOrder(Side::Bid, order);
+  }
+}
+
+void PlaceAllDefaultOrders(OrderBook &book) {
+  PlaceDefaultAskOrders(book);
+  PlaceDefaultBidOrders(book);
+}
+
+// Compares elements of both maps. O(N)
+bool CompareBookMap(const std::map<Price, OrderList> &left,
+                    const std::map<Price, OrderList> &right) {
+
+  for (const auto &elem : left) {
+    auto leftPrice = elem.first;
+    const auto &leftList = elem.second;
+
+    // check keys
+    if (right.contains(leftPrice) == false)
+      return false;
+
+    // compare lists
+    const auto &rightList = right.at(leftPrice);
+    if (leftList != rightList)
+      return false;
+  }
+
+  return true;
+}
+
+} // namespace
+
+struct OrderBookTestPeer {
+  static auto &Orders(OrderBook &book) { return book.m_orders_map; }
+  static auto &Bids(OrderBook &book) { return book.m_bidsMap; }
+  static auto &Asks(OrderBook &book) { return book.m_askMap; }
+};
 // --------------------------------------------------------------//
 
 TEST(OrderBook, EmptyBook) {
-  OrderBook book(1);
-  orderId = 1;
+  auto book = InitBook();
 
   EXPECT_FALSE(book.BestAsk().has_value());
   EXPECT_FALSE(book.BestBid().has_value());
@@ -40,12 +96,8 @@ TEST(OrderBook, EmptyBook) {
 }
 
 TEST(OrderBook, BestAskFromList) {
-  OrderBook book(1);
-  orderId = 1;
-
-  for (const auto &order : getDefaultAskOrders()) {
-    book.PlaceOrder(Side::Ask, order);
-  }
+  auto book = InitBook();
+  PlaceDefaultAskOrders(book);
 
   auto bestAsk = book.BestAsk();
   EXPECT_TRUE(bestAsk.has_value());
@@ -53,12 +105,8 @@ TEST(OrderBook, BestAskFromList) {
 }
 
 TEST(OrderBook, BestBidFromList) {
-  OrderBook book(1);
-  orderId = 1;
-
-  for (const auto &order : getDefaultBidOrders()) {
-    book.PlaceOrder(Side::Bid, order);
-  }
+  auto book = InitBook();
+  PlaceDefaultBidOrders(book);
 
   auto bestBid = book.BestBid();
   EXPECT_TRUE(bestBid.has_value());
@@ -68,17 +116,8 @@ TEST(OrderBook, BestBidFromList) {
 TEST(OrderBook, BestAskAndBidOrders) {
   // Testing if the BestBidOrder/BestAskOrder functions
   // return the same price as the BestBid/BestAsk functions
-
-  OrderBook book(1);
-  orderId = 1;
-
-  for (const auto &order : getDefaultBidOrders()) {
-    book.PlaceOrder(Side::Bid, order);
-  }
-
-  for (const auto &order : getDefaultAskOrders()) {
-    book.PlaceOrder(Side::Ask, order);
-  }
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
 
   auto bestAsk = book.BestAsk();
   auto bestBid = book.BestBid();
@@ -96,16 +135,8 @@ TEST(OrderBook, BestAskAndBidOrders) {
 }
 
 TEST(OrderBook, BookSpread) {
-  OrderBook book(1);
-  orderId = 1;
-
-  for (const auto &order : getDefaultAskOrders()) {
-    book.PlaceOrder(Side::Ask, order);
-  }
-
-  for (const auto &order : getDefaultBidOrders()) {
-    book.PlaceOrder(Side::Bid, order);
-  }
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
 
   auto spread = book.Spread();
   EXPECT_TRUE(spread.has_value());
@@ -114,12 +145,75 @@ TEST(OrderBook, BookSpread) {
   EXPECT_EQ(spread.value(), 300);
 }
 
-// TEST(OrderBook, ModifyOrderInBook) { EXPECT_TRUE(false) }
+// ===== Modify Function Tests =====//
+// Modify function has a few branches so we need to
+// check they all get executed
+
+TEST(OrderBook, ModifyUnknownID) {
+  auto book = InitBook();
+  book.PlaceOrder(Side::Bid, {.id = g_orderId, .price = 100, .qty = 10});
+
+  // Modify unkonwn ID should do nothing;
+  book.Modify(999, 200, std::nullopt);
+
+  ASSERT_TRUE(book.BestBid().has_value());
+  EXPECT_EQ(book.BestBid().value(), Price{100}); // still 100, not 200
+  EXPECT_FALSE(book.BestAsk().has_value());      // nothing leaked onto asks
+}
+
+TEST(OrderBook, ModifyOrderSameValuesNoOp) {
+  // Testing the following from the modify function:
+  // - Modifying the price/order with the same value shouldn't change anything
+  // - Modifying the price/order with the nullopt values shouldn't change
+  // anything
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
+
+  auto asksBefore = OrderBookTestPeer::Asks(book);
+  auto bidsBefore = OrderBookTestPeer::Bids(book);
+
+  g_orderId = 0;
+  auto defaultAsk = GetDefaultAskOrders();
+  auto defaultBids = GetDefaultBidOrders();
+
+  // orders picked at random
+  auto askOrder1 = defaultAsk[0];
+  auto askOrder2 = defaultAsk[3];
+  auto bidOrder1 = defaultBids[2];
+  auto bidOrder2 = defaultBids[4];
+
+  // same price, no qty change
+  book.Modify(askOrder1.id, askOrder1.price, {});
+  // no price, same qty
+  book.Modify(askOrder2.id, {}, askOrder2.qty);
+
+  // repeated but for bid side
+  book.Modify(bidOrder1.id, bidOrder1.price, {});
+  book.Modify(bidOrder2.id, {}, bidOrder2.qty);
+
+  auto asksAfter = OrderBookTestPeer::Asks(book);
+  auto bidsAfter = OrderBookTestPeer::Bids(book);
+
+  EXPECT_TRUE(CompareBookMap(asksBefore, asksAfter));
+  EXPECT_TRUE(CompareBookMap(bidsBefore, bidsAfter));
+}
+
+TEST(OrderBook, QuantityAtPrice) {
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
+
+  auto totalQtySell = book.QuantityAtPrice(Side::Ask, 100);
+  auto totalQtyBuy = book.QuantityAtPrice(Side::Bid, 100);
+
+  Quantity expectSell = 532 + 431;
+  Quantity expectBuy = 100 + 243;
+
+  EXPECT_EQ(totalQtySell, expectSell);
+  EXPECT_EQ(totalQtyBuy, expectBuy);
+}
 
 // TEST(OrderBook, NormalUsageTest) { EXPECT_TRUE(false); }
 
 // Tests to write:
-// Modify
-// Delete
 // Continous usage (read world usage):
 //  - adding, modifying, deleting, checking spread
