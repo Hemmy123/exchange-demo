@@ -12,6 +12,8 @@ The project was created to assist in learning, as such AI was not used to genera
 
 - CMake configuration. I've had experiences using other build systems in the past, but surprisingly CMAKE is a new experience for me. Since I wanted to focus on the C++ and low level machine knowledge, AI assistance was used to help create the CMAKE scripts
 
+- Unit tests. Currently most units tests are hand written, but some longer complex are AI generated or assisted.
+
 ## Building
 
 Requires CMake (3.28+) and a C++26-capable compiler (GCC 16+).
