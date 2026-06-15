@@ -174,51 +174,68 @@ void OrderBook::Print() const {
 void OrderBook::MatchAgainstAsks(OrderParams &incoming) {
   // the best ask price.
   // [Price -> OrderList]
-  auto topOfBookIter = m_askMap.begin();
+  auto bestAskIter = m_askMap.begin();
 
-  if (topOfBookIter == m_askMap.end()) {
+  if (bestAskIter == m_askMap.end()) {
     return;
   }
 
-  //  bool hasPrice = bool isBestPrice =
-
   // clang-format off
   while (incoming.qty > 0 &&                        // has remaining orders
-         topOfBookIter != m_askMap.end() &&         // has price
-         topOfBookIter->first <= incoming.price) {  // is best price
+         bestAskIter != m_askMap.end() &&         // has price
+         bestAskIter->first <= incoming.price) {  // is best price
 
     // clang-format on
-    auto &ordersList = topOfBookIter->second;
+    auto &ordersList = bestAskIter->second;
 
-    while (incoming.qty > 0 && !ordersList.empty()) {
-      // queue is FIFO, so we need to grab the oldest order
-      // at this price first
-      auto &oldestResting = ordersList.front();
-
-      // how much can be traded in this transaction
-      Quantity traded = std::min(incoming.qty, oldestResting.qty);
-
-      incoming.qty -= traded;
-      oldestResting.qty -= traded;
-
-      // TODO: LOG/SEND TRADE EVENT HERE
-
-      // We have consumed the entire order so it needs to
-      // be removed from both maps
-      if (oldestResting.qty == 0) {
-        m_orders_map.erase(oldestResting.id);
-        ordersList.pop_front();
-      }
-    }
+    FillLevel(incoming, ordersList);
 
     // if we've exausted the orders in the list then we
     // need to remove the list
     if (ordersList.empty()) {
-      topOfBookIter = m_askMap.erase(topOfBookIter);
+      bestAskIter = m_askMap.erase(bestAskIter);
     } else {
       break;
     }
   }
 }
 
-void OrderBook::MatchAgainstBids(OrderParams &incoming) {}
+void OrderBook::MatchAgainstBids(OrderParams &incoming) {
+
+  // best bid is always the last one in the map so we only
+  // need to check if the map is empty to work with it.
+  while (incoming.qty && !m_bidsMap.empty()) {
+    // Best bid is the _last_ (i.e. largest) bid.
+    auto bestBidIter = std::prev(m_bidsMap.end());
+
+    if (bestBidIter->first < incoming.price) {
+      break;
+    }
+
+    FillLevel(incoming, bestBidIter->second);
+
+    if (bestBidIter->second.empty()) {
+      m_bidsMap.erase(bestBidIter);
+    } else {
+      break;
+    }
+  }
+}
+
+void OrderBook::FillLevel(OrderParams &incoming, OrderList &restingList) {
+  while (incoming.qty > 0 && !restingList.empty()) {
+    auto &oldestResting = restingList.front(); // FIFO: oldest first
+
+    Quantity traded = std::min(incoming.qty, oldestResting.qty);
+    incoming.qty -= traded;
+    oldestResting.qty -= traded;
+
+    // TODO: emit trade {incoming.id, oldestResting.id, oldestResting.price,
+    // traded}
+
+    if (oldestResting.qty == 0) {
+      m_orders_map.erase(oldestResting.id); // keep the index consistent
+      restingList.pop_front();
+    }
+  }
+}

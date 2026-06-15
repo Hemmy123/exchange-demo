@@ -296,6 +296,84 @@ TEST(OrderBook, MatchBidCrossesWithRestingRemainder) {
   EXPECT_TRUE(book.Contains(5));
 }
 
+TEST(OrderBook, MatchAskCrossesAndClearsLevel) {
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
+
+  // An Ask that only crosses the bid side must leave asks untouched.
+  auto asksBefore = OrderBookTestPeer::Asks(book);
+
+  // best bid starts at 99
+  EXPECT_EQ(book.BestBid().value(), 99);
+
+  // Incoming SELL: price 97, qty 600. Walks bids highest-first:
+  //   99: 300 (id7) + 145 (id8) + 80 (id9) = 525 consumed -> level cleared
+  //   97:  75 of the 480 (id10) consumed                  -> id10 left with 405
+  //   filled = 600 exactly, so nothing rests
+  constexpr OrderId incomingId = 100;
+  book.PlaceOrder(Side::Ask, {.id = incomingId, .price = 97, .qty = 600});
+
+  // 99 fully consumed, best bid moves down to 97
+  EXPECT_FALSE(OrderBookTestPeer::Bids(book).contains(99));
+  EXPECT_EQ(book.BestBid().value(), 97);
+
+  // 97 level partially eaten
+  Quantity expectedBid97 = 405 + 210;
+  EXPECT_EQ(book.QuantityAtPrice(Side::Bid, 97), expectedBid97);
+
+  // front of 97 is the partially-filled id10, now at qty 405
+  auto bestBidOrder = book.BestBidOrder();
+  ASSERT_TRUE(bestBidOrder.has_value());
+  EXPECT_EQ(bestBidOrder.value().id, 10);
+  EXPECT_EQ(bestBidOrder.value().qty, 405);
+
+  // index stays in sync: consumed orders gone, survivor stays
+  EXPECT_FALSE(book.Contains(7));
+  EXPECT_FALSE(book.Contains(8));
+  EXPECT_FALSE(book.Contains(9));
+  EXPECT_TRUE(book.Contains(10));
+
+  // a fully-filled incoming order never rests
+  EXPECT_FALSE(book.Contains(incomingId));
+
+  // crossing the bids must not have touched the ask side
+  auto asksAfter = OrderBookTestPeer::Asks(book);
+  EXPECT_TRUE(CompareBookMap(asksBefore, asksAfter));
+}
+
+TEST(OrderBook, MatchAskCrossesWithRestingRemainder) {
+  auto book = InitBook();
+  PlaceAllDefaultOrders(book);
+
+  // Incoming SELL: price 96, qty 1300. Walks bids highest-first:
+  //   99: 300 + 145 + 80   = 525 consumed -> level cleared
+  //   97: 480 + 210        = 690 consumed -> level cleared
+  //   95: 95 < 96, no longer crosses      -> stop
+  //   filled = 1215, remainder 85 rests as a new ask @ 96
+  constexpr OrderId incomingId = 200;
+  book.PlaceOrder(Side::Ask, {.id = incomingId, .price = 96, .qty = 1300});
+
+  // two bid levels swept; 95 survives as the new best bid
+  EXPECT_FALSE(OrderBookTestPeer::Bids(book).contains(99));
+  EXPECT_FALSE(OrderBookTestPeer::Bids(book).contains(97));
+  EXPECT_EQ(book.BestBid().value(), 95);
+  Quantity expectedBid95 = 75 + 260;
+  EXPECT_EQ(book.QuantityAtPrice(Side::Bid, 95), expectedBid95);
+
+  // the 85-lot remainder rested and is now the best ask
+  EXPECT_EQ(book.BestAsk().value(), 96);
+  EXPECT_EQ(book.QuantityAtPrice(Side::Ask, 96), Quantity{85});
+  EXPECT_TRUE(book.Contains(incomingId));
+
+  // spread tightened to 96 - 95
+  EXPECT_EQ(book.Spread().value(), 1);
+
+  // index stays in sync across the swept levels
+  EXPECT_FALSE(book.Contains(7));
+  EXPECT_FALSE(book.Contains(11));
+  EXPECT_TRUE(book.Contains(12));
+}
+
 // TEST(OrderBook, NormalUsageTest) { EXPECT_TRUE(false); }
 
 // Tests to write:

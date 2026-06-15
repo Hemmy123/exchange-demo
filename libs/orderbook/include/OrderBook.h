@@ -87,7 +87,10 @@ private:
   // We always want to match the incoming order with the
   // opposite side. So ask->bid and bid->ask
   void MatchAgainstAsks(OrderParams &incoming);
+
   void MatchAgainstBids(OrderParams &incoming);
+
+  void FillLevel(OrderParams &incoming, OrderList &restingList);
 
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;
