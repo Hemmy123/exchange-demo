@@ -26,7 +26,7 @@ std::optional<Price> OrderBook::BestAsk() const {
 }
 
 std::optional<Order> OrderBook::BestBidOrder() const {
-  if (m_askMap.empty()) {
+  if (m_bidsMap.empty()) {
     return {};
   }
 
