@@ -57,8 +57,19 @@ std::optional<Price> OrderBook::Spread() const {
 }
 
 void OrderBook::PlaceOrder(const Side side, OrderParams params) {
-  auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
-  AddToSide(book, side, params);
+
+  if (side == Side::Ask) {
+    // Bids match against opposite side (and vise versa)
+    MatchAgainstBids(params);
+  } else {
+    MatchAgainstAsks(params);
+  }
+
+  // If there is still quantity left over, then add the rest to the book
+  if (params.qty > 0) {
+    auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
+    AddToSide(book, side, params);
+  }
 }
 
 void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
@@ -109,7 +120,6 @@ void OrderBook::Delete(const OrderId id) {
     return;
   }
 
-  // Remove and reinsert for new price
   const auto &orderLocation = m_orders_map.at(id);
   auto &list = orderLocation.levelIter->second;
   list.erase(orderLocation.orderIt);
@@ -160,3 +170,55 @@ void OrderBook::Print() const {
     std::print("\n");
   }
 }
+
+void OrderBook::MatchAgainstAsks(OrderParams &incoming) {
+  // the best ask price.
+  // [Price -> OrderList]
+  auto topOfBookIter = m_askMap.begin();
+
+  if (topOfBookIter == m_askMap.end()) {
+    return;
+  }
+
+  //  bool hasPrice = bool isBestPrice =
+
+  // clang-format off
+  while (incoming.qty > 0 &&                        // has remaining orders
+         topOfBookIter != m_askMap.end() &&         // has price
+         topOfBookIter->first <= incoming.price) {  // is best price
+
+    // clang-format on
+    auto &ordersList = topOfBookIter->second;
+
+    while (incoming.qty > 0 && !ordersList.empty()) {
+      // queue is FIFO, so we need to grab the oldest order
+      // at this price first
+      auto &oldestResting = ordersList.front();
+
+      // how much can be traded in this transaction
+      Quantity traded = std::min(incoming.qty, oldestResting.qty);
+
+      incoming.qty -= traded;
+      oldestResting.qty -= traded;
+
+      // TODO: LOG/SEND TRADE EVENT HERE
+
+      // We have consumed the entire order so it needs to
+      // be removed from both maps
+      if (oldestResting.qty == 0) {
+        m_orders_map.erase(oldestResting.id);
+        ordersList.pop_front();
+      }
+    }
+
+    // if we've exausted the orders in the list then we
+    // need to remove the list
+    if (ordersList.empty()) {
+      topOfBookIter = m_askMap.erase(topOfBookIter);
+    } else {
+      break;
+    }
+  }
+}
+
+void OrderBook::MatchAgainstBids(OrderParams &incoming) {}

@@ -84,6 +84,11 @@ private:
   template <typename BookSide>
   void AddToSide(BookSide &book, Side side, const OrderParams params);
 
+  // We always want to match the incoming order with the
+  // opposite side. So ask->bid and bid->ask
+  void MatchAgainstAsks(OrderParams &incoming);
+  void MatchAgainstBids(OrderParams &incoming);
+
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;
 };

@@ -19,24 +19,26 @@ OrderBook InitBook() {
 }
 
 auto GetDefaultAskOrders() {
-  std::array<OrderParams, 6> askOrders{
-      {{.id = g_orderId++, .price = 100, .qty = 532},
-       {.id = g_orderId++, .price = 100, .qty = 431},
-       {.id = g_orderId++, .price = 300, .qty = 312},
-       {.id = g_orderId++, .price = 300, .qty = 130},
-       {.id = g_orderId++, .price = 400, .qty = 432},
-       {.id = g_orderId++, .price = 400, .qty = 230}}};
+  std::array<OrderParams, 7> askOrders{
+      {{.id = g_orderId++, .price = 101, .qty = 250},
+       {.id = g_orderId++, .price = 101, .qty = 175},
+       {.id = g_orderId++, .price = 102, .qty = 400},
+       {.id = g_orderId++, .price = 102, .qty = 90},
+       {.id = g_orderId++, .price = 102, .qty = 60},
+       {.id = g_orderId++, .price = 104, .qty = 320},
+       {.id = g_orderId++, .price = 104, .qty = 210}}};
   return askOrders;
 }
 
 auto GetDefaultBidOrders() {
-  std::array<OrderParams, 6> bidOrders{
-      {{.id = g_orderId++, .price = 100, .qty = 100},
-       {.id = g_orderId++, .price = 200, .qty = 320},
-       {.id = g_orderId++, .price = 200, .qty = 102},
-       {.id = g_orderId++, .price = 400, .qty = 132},
-       {.id = g_orderId++, .price = 400, .qty = 134},
-       {.id = g_orderId++, .price = 100, .qty = 243}}};
+  std::array<OrderParams, 7> bidOrders{
+      {{.id = g_orderId++, .price = 99, .qty = 300},
+       {.id = g_orderId++, .price = 99, .qty = 145},
+       {.id = g_orderId++, .price = 99, .qty = 80},
+       {.id = g_orderId++, .price = 97, .qty = 480},
+       {.id = g_orderId++, .price = 97, .qty = 210},
+       {.id = g_orderId++, .price = 95, .qty = 75},
+       {.id = g_orderId++, .price = 95, .qty = 260}}};
   return bidOrders;
 }
 
@@ -101,7 +103,7 @@ TEST(OrderBook, BestAskFromList) {
 
   auto bestAsk = book.BestAsk();
   EXPECT_TRUE(bestAsk.has_value());
-  EXPECT_EQ(bestAsk.value(), 100);
+  EXPECT_EQ(bestAsk.value(), 101);
 }
 
 TEST(OrderBook, BestBidFromList) {
@@ -110,7 +112,7 @@ TEST(OrderBook, BestBidFromList) {
 
   auto bestBid = book.BestBid();
   EXPECT_TRUE(bestBid.has_value());
-  EXPECT_EQ(bestBid.value(), 400);
+  EXPECT_EQ(bestBid.value(), 99);
 }
 
 TEST(OrderBook, BestAskAndBidOrders) {
@@ -118,7 +120,7 @@ TEST(OrderBook, BestAskAndBidOrders) {
   // return the same price as the BestBid/BestAsk functions
   auto book = InitBook();
   PlaceAllDefaultOrders(book);
-
+  book.Print();
   auto bestAsk = book.BestAsk();
   auto bestBid = book.BestBid();
 
@@ -142,7 +144,7 @@ TEST(OrderBook, BookSpread) {
   EXPECT_TRUE(spread.has_value());
   // spread = diff(highest bid - lowest ask)
   // spread = 400 - 100
-  EXPECT_EQ(spread.value(), 300);
+  EXPECT_EQ(spread.value(), 2);
 }
 
 // ===== Modify Function Tests =====//
@@ -202,14 +204,14 @@ TEST(OrderBook, QuantityAtPrice) {
   auto book = InitBook();
   PlaceAllDefaultOrders(book);
 
-  auto totalQtySell = book.QuantityAtPrice(Side::Ask, 100);
-  auto totalQtyBuy = book.QuantityAtPrice(Side::Bid, 100);
+  auto totalAskQty = book.QuantityAtPrice(Side::Ask, 102);
+  auto totalBidQty = book.QuantityAtPrice(Side::Bid, 99);
 
-  Quantity expectSell = 532 + 431;
-  Quantity expectBuy = 100 + 243;
+  Quantity expectedAsk = 400 + 90 + 60;
+  Quantity expectedBid = 300 + 145 + 80;
 
-  EXPECT_EQ(totalQtySell, expectSell);
-  EXPECT_EQ(totalQtyBuy, expectBuy);
+  EXPECT_EQ(totalAskQty, expectedAsk);
+  EXPECT_EQ(totalBidQty, expectedBid);
 }
 
 // TEST(OrderBook, NormalUsageTest) { EXPECT_TRUE(false); }
