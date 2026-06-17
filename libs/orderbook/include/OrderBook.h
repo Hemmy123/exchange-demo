@@ -8,8 +8,6 @@
 #include <optional>
 #include <unordered_map>
 
-enum class Side { Bid, Ask };
-
 struct OrderParams {
   OrderId id;
   Price price;
@@ -17,7 +15,6 @@ struct OrderParams {
 };
 
 // ----- Order Book ---- //
-//
 
 struct Order {
   OrderId id;
@@ -81,6 +78,10 @@ private:
 
   std::unordered_map<OrderId, OrderLocation> m_orders_map;
 
+  // TODO: Placeholder vector to keep track of what trades have
+  // happened. This will be replaced later
+  std::vector<TradeEvent> m_tradeEvents;
+
   template <typename BookSide>
   void AddToSide(BookSide &book, Side side, const OrderParams params);
 
@@ -90,7 +91,8 @@ private:
 
   void MatchAgainstBids(OrderParams &incoming);
 
-  void FillLevel(OrderParams &incoming, OrderList &restingList);
+  void FillLevel(Side aggressorside, OrderParams &incoming,
+                 OrderList &restingList);
 
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;

@@ -188,7 +188,7 @@ void OrderBook::MatchAgainstAsks(OrderParams &incoming) {
     // clang-format on
     auto &ordersList = bestAskIter->second;
 
-    FillLevel(incoming, ordersList);
+    FillLevel(Side::Bid, incoming, ordersList);
 
     // if we've exausted the orders in the list then we
     // need to remove the list
@@ -212,7 +212,7 @@ void OrderBook::MatchAgainstBids(OrderParams &incoming) {
       break;
     }
 
-    FillLevel(incoming, bestBidIter->second);
+    FillLevel(Side::Ask, incoming, bestBidIter->second);
 
     if (bestBidIter->second.empty()) {
       m_bidsMap.erase(bestBidIter);
@@ -222,7 +222,8 @@ void OrderBook::MatchAgainstBids(OrderParams &incoming) {
   }
 }
 
-void OrderBook::FillLevel(OrderParams &incoming, OrderList &restingList) {
+void OrderBook::FillLevel(Side aggressorSide, OrderParams &incoming,
+                          OrderList &restingList) {
   while (incoming.qty > 0 && !restingList.empty()) {
     auto &oldestResting = restingList.front(); // FIFO: oldest first
 
@@ -230,8 +231,19 @@ void OrderBook::FillLevel(OrderParams &incoming, OrderList &restingList) {
     incoming.qty -= traded;
     oldestResting.qty -= traded;
 
-    // TODO: emit trade {incoming.id, oldestResting.id, oldestResting.price,
-    // traded}
+    // TODO: Placeholder logic for tracking what trades have happened
+    // This will be replaced later.
+    m_tradeEvents.emplace_back(TradeEvent{
+        .tradeId = 0, // engine stamps later
+        .instrumentId = m_instrument,
+        .price = oldestResting.price,
+        .quantityTraded = traded,
+        .aggressorId = incoming.id,
+        .restingId = oldestResting.id,
+        .aggressorSide = aggressorSide,
+        .timeStamp = {}, // same as id, engine stamps later
+        .restingRemaining = oldestResting.qty,
+    });
 
     if (oldestResting.qty == 0) {
       m_orders_map.erase(oldestResting.id); // keep the index consistent

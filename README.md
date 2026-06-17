@@ -14,6 +14,8 @@ The project was created to assist in learning, as such AI was not used to genera
 
 - Unit tests. Currently most units tests are hand written, but some longer complex are AI generated or assisted.
 
+- Learning new concepts. The finance space is new to me, as such AI was one of the resources I used to figure out how I should design my system.
+
 ## Building
 
 Requires CMake (3.28+) and a C++26-capable compiler (GCC 16+).
