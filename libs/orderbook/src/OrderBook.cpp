@@ -4,6 +4,7 @@
 #include <numeric>
 #include <optional>
 #include <print>
+#include <vector>
 
 namespace OrderBookHelpers {}
 
@@ -107,9 +108,7 @@ void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
 
   // Erase the old order so we can read the new one.
   Delete(id);
-
-  auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
-  AddToSide(book, side, {.id = id, .price = price, .qty = qty});
+  PlaceOrder(side, {.id = id, .price = price, .qty = qty});
 }
 
 void OrderBook::Delete(const OrderId id) {
@@ -136,7 +135,7 @@ std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
   const auto &priceList = book.at(price);
 
   return std::accumulate(
-      priceList.cbegin(), priceList.cend(), 0,
+      priceList.cbegin(), priceList.cend(), Quantity{0},
       [](Quantity sum, const Order &order) { return sum + order.qty; });
 }
 
@@ -250,4 +249,10 @@ void OrderBook::FillLevel(Side aggressorSide, OrderParams &incoming,
       restingList.pop_front();
     }
   }
+}
+
+std::vector<TradeEvent> OrderBook::DrainTrades() {
+  auto out = std::move(m_tradeEvents);
+  m_tradeEvents.clear();
+  return out;
 }

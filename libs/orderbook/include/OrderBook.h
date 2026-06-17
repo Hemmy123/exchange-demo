@@ -63,6 +63,8 @@ public:
 
   void Print() const;
 
+  std::vector<TradeEvent> DrainTrades();
+
 private:
   InstrumentId m_instrument;
 

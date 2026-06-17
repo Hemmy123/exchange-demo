@@ -20,6 +20,6 @@ struct TradeEvent {
   OrderId aggressorId;     // ID of the incoming order
   OrderId restingId;       // ID of taken order, maker.
   Side aggressorSide;
-  std::chrono::steady_clock timeStamp;
+  std::chrono::system_clock::time_point timeStamp;
   Quantity restingRemaining; //  if 0, order has been fulfilled and removed
 };
