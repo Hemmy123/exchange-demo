@@ -8,24 +8,6 @@
 #include <optional>
 #include <unordered_map>
 
-struct OrderParams {
-  OrderId id;
-  Price price;
-  Quantity qty;
-};
-
-// ----- Order Book ---- //
-
-struct Order {
-  OrderId id;
-  Price price;
-  Quantity qty;
-
-  bool operator==(const Order &) const = default;
-};
-
-using OrderList = std::list<Order>;
-
 class OrderBook {
 public:
   OrderBook(InstrumentId instrumentId) : m_instrument(instrumentId) {};
