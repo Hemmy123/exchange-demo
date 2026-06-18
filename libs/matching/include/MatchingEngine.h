@@ -9,12 +9,18 @@ class OrderBook;
 class MatchingEngine {
 public:
   std::vector<TradeEvent> PlaceOrder(InstrumentId instrument, Side side,
-                                     OrderParams params);
+                                     OrderParams &params);
 
   void Modify(InstrumentId instrument, OrderId id, std::optional<Price> price,
               std::optional<Quantity> qty);
+
   void Delete(InstrumentId instrument, OrderId id);
 
 private:
+  std::vector<TradeEvent> StampAndCollect(OrderBook &book);
+
   std::unordered_map<InstrumentId, OrderBook> m_books;
+
+  // 0 reserved for invalid
+  TradeId m_nextTradeId{1};
 };
