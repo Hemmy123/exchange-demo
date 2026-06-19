@@ -12,11 +12,21 @@ class MatchingEngine {
 public:
   explicit MatchingEngine(IMarketDataSink &sink) : m_marketDataSink(sink) {};
 
+  // Note: OrderID is per instrument and not compaitable across instruments!
   std::vector<TradeEvent> PlaceOrder(InstrumentId instrument, Side side,
                                      Order &params);
 
   void Modify(InstrumentId instrument, OrderId id, std::optional<Price> price,
               std::optional<Quantity> qty);
+
+  // Currently Modify loses the time priority for an order because it deletes
+  // and re-inserts into the list. Most real exhanges allow for downward
+  // quantity modification without losing priority (i.e. they can modify
+  // quentity without being moved in the list) It might be worth making a
+  // separate function for this
+  //
+  // void ModifyQuantity(InstrumentId instrument, OrderId orderId, Quantity
+  // qty);
 
   void Delete(InstrumentId instrument, OrderId id);
 

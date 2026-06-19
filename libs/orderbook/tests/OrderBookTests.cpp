@@ -374,6 +374,48 @@ TEST(OrderBook, MatchAskCrossesWithRestingRemainder) {
   EXPECT_TRUE(book.Contains(12));
 }
 
+TEST(OrderBook, DeleteLastBidAtLevelRemovesLevel) {
+  auto book = InitBook();
+
+  // Two bid levels: 100 (one order) and 99 (one order)
+  OrderId id100 = g_orderId++;
+  OrderId id99 = g_orderId++;
+  book.PlaceOrder(Side::Bid, {.id = id100, .price = 100, .qty = 50});
+  book.PlaceOrder(Side::Bid, {.id = id99, .price = 99, .qty = 50});
+
+  ASSERT_EQ(book.BestBid().value(), Price{100});
+
+  book.Delete(id100);
+
+  // Level 100 must be gone from the internal map
+  EXPECT_FALSE(OrderBookTestPeer::Bids(book).contains(100));
+
+  // BestBid must reflect the next level, not the now-empty one
+  ASSERT_TRUE(book.BestBid().has_value());
+  EXPECT_EQ(book.BestBid().value(), Price{99});
+}
+
+TEST(OrderBook, DeleteLastAskAtLevelRemovesLevel) {
+  auto book = InitBook();
+
+  // Two ask levels: 100 (one order) and 101 (one order)
+  OrderId id100 = g_orderId++;
+  OrderId id101 = g_orderId++;
+  book.PlaceOrder(Side::Ask, {.id = id100, .price = 100, .qty = 50});
+  book.PlaceOrder(Side::Ask, {.id = id101, .price = 101, .qty = 50});
+
+  ASSERT_EQ(book.BestAsk().value(), Price{100});
+
+  book.Delete(id100);
+
+  // Level 100 must be gone from the internal map
+  EXPECT_FALSE(OrderBookTestPeer::Asks(book).contains(100));
+
+  // BestAsk must reflect the next level, not the now-empty one
+  ASSERT_TRUE(book.BestAsk().has_value());
+  EXPECT_EQ(book.BestAsk().value(), Price{101});
+}
+
 // TEST(OrderBook, NormalUsageTest) { EXPECT_TRUE(false); }
 
 // Tests to write:

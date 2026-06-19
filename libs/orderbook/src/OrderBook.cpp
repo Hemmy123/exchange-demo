@@ -126,6 +126,11 @@ bool OrderBook::Delete(const OrderId id) {
   auto &list = orderLocation.levelIter->second;
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
+
+  if (list.empty()) {
+    auto &book = (orderLocation.side == Side::Bid) ? m_bidsMap : m_askMap;
+    book.erase(orderLocation.levelIter);
+  }
   return true;
 }
 
