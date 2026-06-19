@@ -23,7 +23,7 @@ enable_testing()
 add_subdirectory(libs/core)
 add_subdirectory(libs/matching)
 add_subdirectory(libs/orderbook)
-# add_subdirectory(libs/marketdata)
+add_subdirectory(libs/marketdata)
 # add_subdirectory(libs/feedhandler)
 
 

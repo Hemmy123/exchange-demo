@@ -14,7 +14,13 @@ std::vector<TradeEvent> MatchingEngine::PlaceOrder(InstrumentId instrument,
   auto &book = m_books.at(instrument);
   book.PlaceOrder(side, params);
 
-  return StampAndCollect(book);
+  auto trades = StampAndCollect(book);
+
+  for (const auto &trade : trades) {
+    m_marketDataSink.Publish(trade);
+  }
+
+  return trades;
 }
 
 void MatchingEngine::Modify(InstrumentId instrument, OrderId id,
@@ -28,13 +34,11 @@ void MatchingEngine::Modify(InstrumentId instrument, OrderId id,
   m_books.at(instrument).Modify(id, price, qty);
 }
 
-void MatchingEngine::Delete(InstrumentId instrument, OrderId id) {
+void MatchingEngine::Delete(InstrumentId instrument, OrderId orderId) {
   if (m_books.contains(instrument) == false) {
-    // TODO: Log error
     return;
   }
-
-  m_books.at(instrument).Delete(id);
+  m_books.at(instrument).Delete(orderId);
 }
 
 std::vector<TradeEvent> MatchingEngine::StampAndCollect(OrderBook &book) {

@@ -1,6 +1,8 @@
+#include "IMarketDataSink.h"
 #include "MatchingEngine.h"
 #include "OrderBook.h" // OrderParams
 #include "Types.h"     // Side, TradeEvent
+
 #include <chrono>
 #include <gtest/gtest.h>
 #include <optional>
@@ -16,12 +18,21 @@ std::vector<TradeEvent> Place(MatchingEngine &engine, InstrumentId instrument,
   return engine.PlaceOrder(instrument, side, params);
 }
 
+// MatchingEngine requires an IMarketDataSink to be passed in.
+// We don't need to test this publishing logic here so we
+// just pass in a dummy class which does nothing.
+class MarketSinkDummy : public IMarketDataSink {
+public:
+  void Publish(const InternalEvent &ev) override {};
+};
+
 } // namespace
 
 // --- Lifecycle ------------------------------------------------------------//
 
 TEST(MatchingEngine, PlaceOnNewInstrumentCreatesBookAndRests) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   // instrument 42 has never been seen: the engine must create the book lazily,
   // rest the order, and return no trades (nothing to cross with).
   auto trades =
@@ -32,7 +43,8 @@ TEST(MatchingEngine, PlaceOnNewInstrumentCreatesBookAndRests) {
 // --- Identity stamping ----------------------------------------------------//
 
 TEST(MatchingEngine, CrossingOrderReturnsFullyStampedTrade) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   constexpr InstrumentId instrument = 7;
 
   // resting ask of 10 @ 100
@@ -63,8 +75,8 @@ TEST(MatchingEngine, CrossingOrderReturnsFullyStampedTrade) {
 }
 
 TEST(MatchingEngine, TradeIdsAreMonotonicAcrossInstruments) {
-  MatchingEngine engine;
-
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   // instrument 1: rest then cross -> trade id 1
   Place(engine, 1, Side::Ask, {.id = 1, .price = 100, .qty = 10});
   auto t1 = Place(engine, 1, Side::Bid, {.id = 2, .price = 100, .qty = 10});
@@ -81,7 +93,8 @@ TEST(MatchingEngine, TradeIdsAreMonotonicAcrossInstruments) {
 }
 
 TEST(MatchingEngine, SweepProducesSequentialIdsWithinOneCall) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   // two resting asks at different levels
   Place(engine, 1, Side::Ask, {.id = 1, .price = 100, .qty = 10});
   Place(engine, 1, Side::Ask, {.id = 2, .price = 101, .qty = 10});
@@ -98,7 +111,8 @@ TEST(MatchingEngine, SweepProducesSequentialIdsWithinOneCall) {
 // --- Routing / isolation --------------------------------------------------//
 
 TEST(MatchingEngine, BooksAreIsolatedByInstrument) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   // rest an ask on instrument 2
   Place(engine, 2, Side::Ask, {.id = 1, .price = 100, .qty = 10});
 
@@ -110,7 +124,8 @@ TEST(MatchingEngine, BooksAreIsolatedByInstrument) {
 }
 
 TEST(MatchingEngine, DeleteRoutesToCorrectBook) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   Place(engine, 1, Side::Ask, {.id = 1, .price = 100, .qty = 10}); // rests
   engine.Delete(1, 1);                                             // remove it
 
@@ -122,7 +137,8 @@ TEST(MatchingEngine, DeleteRoutesToCorrectBook) {
 // --- Unknown-instrument guards --------------------------------------------//
 
 TEST(MatchingEngine, ModifyAndDeleteUnknownInstrumentAreNoOps) {
-  MatchingEngine engine;
+  MarketSinkDummy dummySink;
+  MatchingEngine engine(dummySink);
   // no book for 999 exists; the contains-guards must make these safe no-ops,
   // not throw (which an unguarded m_books.at(...) would).
   EXPECT_NO_THROW(engine.Modify(999, 1, Price{100}, std::nullopt));

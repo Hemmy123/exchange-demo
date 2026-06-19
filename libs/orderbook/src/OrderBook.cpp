@@ -73,12 +73,12 @@ void OrderBook::PlaceOrder(const Side side, OrderParams params) {
   }
 }
 
-void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
+bool OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
                        std::optional<Quantity> newQty) {
 
   if (m_orders_map.contains(id) == false) {
     // TODO: Log warning here.
-    return;
+    return false;
   }
 
   // Remove and reinsert for new price
@@ -103,26 +103,30 @@ void OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
 
   if (!modified) {
     // TODO: Add warning here
-    return;
+    return false;
   }
 
   // Erase the old order so we can read the new one.
-  Delete(id);
+  if (Delete(id) == false) {
+    return false;
+  }
+
   PlaceOrder(side, {.id = id, .price = price, .qty = qty});
+  return true;
 }
 
-void OrderBook::Delete(const OrderId id) {
+bool OrderBook::Delete(const OrderId id) {
 
   // make a separate DeleteInternal for both delete and Modify to use?
   if (m_orders_map.contains(id) == false) {
-    // TODO: Log warning here.
-    return;
+    return false;
   }
 
   const auto &orderLocation = m_orders_map.at(id);
   auto &list = orderLocation.levelIter->second;
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
+  return true;
 }
 
 std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
@@ -240,8 +244,8 @@ void OrderBook::FillLevel(Side aggressorSide, OrderParams &incoming,
         .aggressorId = incoming.id,
         .restingId = oldestResting.id,
         .aggressorSide = aggressorSide,
-        .timeStamp = {}, // same as id, engine stamps later
         .restingRemaining = oldestResting.qty,
+        .timeStamp = {}, // same as id, engine stamps later
     });
 
     if (oldestResting.qty == 0) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "InternalEvents.h"
 #include "Types.h"
 #include "Utils.h"
 
@@ -8,16 +9,18 @@
 #include <optional>
 #include <unordered_map>
 
+class TradeEvent;
+
 class OrderBook {
 public:
   OrderBook(InstrumentId instrumentId) : m_instrument(instrumentId) {};
 
   MOVE_ONLY(OrderBook)
 
-  void Modify(const OrderId id, std::optional<Price> newPrice,
+  bool Modify(const OrderId id, std::optional<Price> newPrice,
               std::optional<Quantity> newQuantity);
 
-  void Delete(const OrderId id);
+  bool Delete(const OrderId id);
 
   void PlaceOrder(const Side side, OrderParams params);
 
