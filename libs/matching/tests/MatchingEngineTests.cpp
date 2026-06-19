@@ -14,7 +14,7 @@ namespace {
 // lets the call sites below use brace-initialised temporaries. (See note re:
 // changing the signature to by-value, which would make this unnecessary.)
 std::vector<TradeEvent> Place(MatchingEngine &engine, InstrumentId instrument,
-                              Side side, OrderParams params) {
+                              Side side, Order params) {
   return engine.PlaceOrder(instrument, side, params);
 }
 

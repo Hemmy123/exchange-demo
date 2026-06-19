@@ -11,12 +11,6 @@ using Price = uint64_t;
 using Quantity = uint64_t;
 using InstrumentId = uint64_t;
 
-struct OrderParams {
-  OrderId id;
-  Price price;
-  Quantity qty;
-};
-
 struct Order {
   OrderId id;
   Price price;

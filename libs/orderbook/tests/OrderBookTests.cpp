@@ -19,7 +19,7 @@ OrderBook InitBook() {
 }
 
 auto GetDefaultAskOrders() {
-  std::array<OrderParams, 7> askOrders{
+  std::array<Order, 7> askOrders{
       {{.id = g_orderId++, .price = 101, .qty = 250},
        {.id = g_orderId++, .price = 101, .qty = 175},
        {.id = g_orderId++, .price = 102, .qty = 400},
@@ -31,7 +31,7 @@ auto GetDefaultAskOrders() {
 }
 
 auto GetDefaultBidOrders() {
-  std::array<OrderParams, 7> bidOrders{
+  std::array<Order, 7> bidOrders{
       {{.id = g_orderId++, .price = 99, .qty = 300},
        {.id = g_orderId++, .price = 99, .qty = 145},
        {.id = g_orderId++, .price = 99, .qty = 80},

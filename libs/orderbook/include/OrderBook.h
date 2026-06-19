@@ -15,6 +15,8 @@ class OrderBook {
 public:
   OrderBook(InstrumentId instrumentId) : m_instrument(instrumentId) {};
 
+  OrderBook() = delete;
+
   MOVE_ONLY(OrderBook)
 
   bool Modify(const OrderId id, std::optional<Price> newPrice,
@@ -22,7 +24,7 @@ public:
 
   bool Delete(const OrderId id);
 
-  void PlaceOrder(const Side side, OrderParams params);
+  void PlaceOrder(const Side side, Order params);
 
   // Returns the bid at the highest price
   std::optional<Price> BestBid() const;
@@ -70,16 +72,15 @@ private:
   std::vector<TradeEvent> m_tradeEvents;
 
   template <typename BookSide>
-  void AddToSide(BookSide &book, Side side, const OrderParams params);
+  void AddToSide(BookSide &book, Side side, const Order params);
 
   // We always want to match the incoming order with the
   // opposite side. So ask->bid and bid->ask
-  void MatchAgainstAsks(OrderParams &incoming);
+  void MatchAgainstAsks(Order &incoming);
 
-  void MatchAgainstBids(OrderParams &incoming);
+  void MatchAgainstBids(Order &incoming);
 
-  void FillLevel(Side aggressorside, OrderParams &incoming,
-                 OrderList &restingList);
+  void FillLevel(Side aggressorside, Order &incoming, OrderList &restingList);
 
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;
@@ -88,7 +89,7 @@ private:
 // ====== template definitions ===== //
 
 template <typename BookSide>
-void OrderBook::AddToSide(BookSide &book, Side side, const OrderParams params) {
+void OrderBook::AddToSide(BookSide &book, Side side, const Order params) {
   auto priceLevelIter = book.try_emplace(params.price).first;
   auto &priceList = priceLevelIter->second;
   priceList.emplace_back(params.id, params.price, params.qty);

@@ -4,8 +4,7 @@
 #include <chrono>
 
 std::vector<TradeEvent> MatchingEngine::PlaceOrder(InstrumentId instrument,
-                                                   Side side,
-                                                   OrderParams &params) {
+                                                   Side side, Order &params) {
 
   if (m_books.contains(instrument) == false) {
     m_books.insert({instrument, OrderBook(instrument)});

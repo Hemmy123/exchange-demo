@@ -57,7 +57,7 @@ std::optional<Price> OrderBook::Spread() const {
              static_cast<int>(bestAsk.value()));
 }
 
-void OrderBook::PlaceOrder(const Side side, OrderParams params) {
+void OrderBook::PlaceOrder(const Side side, Order params) {
 
   if (side == Side::Ask) {
     // Bids match against opposite side (and vise versa)
@@ -174,7 +174,7 @@ void OrderBook::Print() const {
   }
 }
 
-void OrderBook::MatchAgainstAsks(OrderParams &incoming) {
+void OrderBook::MatchAgainstAsks(Order &incoming) {
   // the best ask price.
   // [Price -> OrderList]
   auto bestAskIter = m_askMap.begin();
@@ -203,7 +203,7 @@ void OrderBook::MatchAgainstAsks(OrderParams &incoming) {
   }
 }
 
-void OrderBook::MatchAgainstBids(OrderParams &incoming) {
+void OrderBook::MatchAgainstBids(Order &incoming) {
 
   // best bid is always the last one in the map so we only
   // need to check if the map is empty to work with it.
@@ -225,7 +225,7 @@ void OrderBook::MatchAgainstBids(OrderParams &incoming) {
   }
 }
 
-void OrderBook::FillLevel(Side aggressorSide, OrderParams &incoming,
+void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
                           OrderList &restingList) {
   while (incoming.qty > 0 && !restingList.empty()) {
     auto &oldestResting = restingList.front(); // FIFO: oldest first

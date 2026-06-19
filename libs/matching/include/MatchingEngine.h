@@ -13,7 +13,7 @@ public:
   explicit MatchingEngine(IMarketDataSink &sink) : m_marketDataSink(sink) {};
 
   std::vector<TradeEvent> PlaceOrder(InstrumentId instrument, Side side,
-                                     OrderParams &params);
+                                     Order &params);
 
   void Modify(InstrumentId instrument, OrderId id, std::optional<Price> price,
               std::optional<Quantity> qty);
