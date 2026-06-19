@@ -66,7 +66,7 @@ TEST(MatchingEngine, CrossingOrderReturnsFullyStampedTrade) {
 
   // fields the book supplied (sanity, not a re-test of matching):
   EXPECT_EQ(t.instrumentId, instrument); // correct book stamped it
-  EXPECT_EQ(t.price, 100u);              // resting price
+  EXPECT_EQ(t.restingPrice, 100u);       // resting price
   EXPECT_EQ(t.quantityTraded, 4u);
   EXPECT_EQ(t.aggressorId, 20u);
   EXPECT_EQ(t.restingId, 10u);
@@ -104,8 +104,8 @@ TEST(MatchingEngine, SweepProducesSequentialIdsWithinOneCall) {
   ASSERT_EQ(trades.size(), 2u);
   EXPECT_EQ(trades[0].tradeId, 1u);
   EXPECT_EQ(trades[1].tradeId, 2u);
-  EXPECT_EQ(trades[0].price, 100u); // cheapest ask filled first
-  EXPECT_EQ(trades[1].price, 101u);
+  EXPECT_EQ(trades[0].restingPrice, 100u); // cheapest ask filled first
+  EXPECT_EQ(trades[1].restingPrice, 101u);
 }
 
 // --- Routing / isolation --------------------------------------------------//

@@ -239,7 +239,7 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
     m_tradeEvents.emplace_back(TradeEvent{
         .tradeId = 0, // engine stamps later
         .instrumentId = m_instrument,
-        .price = oldestResting.price,
+        .restingPrice = oldestResting.price,
         .quantityTraded = traded,
         .aggressorId = incoming.id,
         .restingId = oldestResting.id,

@@ -10,7 +10,7 @@ void MarketDataPublisher::Publish(const InternalEvent &ev) {
         .seqNum = m_nextSeq++,
         .instrumentId = tradeEvent->instrumentId,
         .timeStamp = tradeEvent->timeStamp,
-        .body = MdTrade{tradeEvent->price, tradeEvent->quantityTraded,
+        .body = MdTrade{tradeEvent->restingPrice, tradeEvent->quantityTraded,
                         tradeEvent->aggressorSide, tradeEvent->tradeId},
     };
     m_transport.Send(md);

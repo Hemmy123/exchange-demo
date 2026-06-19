@@ -26,7 +26,7 @@ TEST(MarketDataPublisher, TradeNormalizedToMdTrade) {
   TradeEvent trade{
       .tradeId = 7,
       .instrumentId = 7,
-      .price = 100,
+      .restingPrice = 100,
       .quantityTraded = 4,
       .aggressorId = 20,
       .restingId = 10,
@@ -62,7 +62,7 @@ TEST(MarketDataPublisher, SequenceNumbersIncrementPerPublishedEvent) {
 
   publisher.Publish(TradeEvent{.tradeId = 1,
                                .instrumentId = 1,
-                               .price = 100,
+                               .restingPrice = 100,
                                .quantityTraded = 10,
                                .aggressorId = 1,
                                .restingId = 2,
@@ -71,7 +71,7 @@ TEST(MarketDataPublisher, SequenceNumbersIncrementPerPublishedEvent) {
                                .timeStamp = std::chrono::system_clock::now()});
   publisher.Publish(TradeEvent{.tradeId = 2,
                                .instrumentId = 1,
-                               .price = 101,
+                               .restingPrice = 101,
                                .quantityTraded = 5,
                                .aggressorId = 3,
                                .restingId = 4,
@@ -80,7 +80,7 @@ TEST(MarketDataPublisher, SequenceNumbersIncrementPerPublishedEvent) {
                                .timeStamp = std::chrono::system_clock::now()});
   publisher.Publish(TradeEvent{.tradeId = 3,
                                .instrumentId = 1,
-                               .price = 102,
+                               .restingPrice = 102,
                                .quantityTraded = 1,
                                .aggressorId = 5,
                                .restingId = 6,
@@ -101,7 +101,7 @@ TEST(MarketDataPublisher, FilteredEventsDoNotConsumeSequenceNumbers) {
   publisher.Publish(
       TradeEvent{.tradeId = 1,
                  .instrumentId = 1,
-                 .price = 100,
+                 .restingPrice = 100,
                  .quantityTraded = 10,
                  .aggressorId = 1,
                  .restingId = 2,
@@ -116,7 +116,7 @@ TEST(MarketDataPublisher, FilteredEventsDoNotConsumeSequenceNumbers) {
   publisher.Publish(TradeEvent{
       .tradeId = 2,
       .instrumentId = 1,
-      .price = 100,
+      .restingPrice = 100,
       .quantityTraded = 5,
       .aggressorId = 4,
       .restingId = 5,
@@ -145,7 +145,7 @@ TEST(MarketDataPublisher, EachPublisherHasIndependentSequence) {
   a.Publish(
       TradeEvent{.tradeId = 1,
                  .instrumentId = 1,
-                 .price = 100,
+                 .restingPrice = 100,
                  .quantityTraded = 10,
                  .aggressorId = 1,
                  .restingId = 2,
@@ -155,7 +155,7 @@ TEST(MarketDataPublisher, EachPublisherHasIndependentSequence) {
   a.Publish(
       TradeEvent{.tradeId = 2,
                  .instrumentId = 1,
-                 .price = 100,
+                 .restingPrice = 100,
                  .quantityTraded = 10,
                  .aggressorId = 3,
                  .restingId = 4,
@@ -165,7 +165,7 @@ TEST(MarketDataPublisher, EachPublisherHasIndependentSequence) {
   b.Publish(
       TradeEvent{.tradeId = 3,
                  .instrumentId = 1,
-                 .price = 100,
+                 .restingPrice = 100,
                  .quantityTraded = 10,
                  .aggressorId = 5,
                  .restingId = 6,

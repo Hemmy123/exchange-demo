@@ -7,7 +7,7 @@
 struct TradeEvent {
   TradeId tradeId;
   InstrumentId instrumentId;
-  Price price;             // resting order price, NOT incoming price
+  Price restingPrice;      // resting order price, NOT incoming price
   Quantity quantityTraded; // min(incoming,resting)
   OrderId aggressorId;     // ID of the incoming order
   OrderId restingId;       // ID of taken order, maker.
