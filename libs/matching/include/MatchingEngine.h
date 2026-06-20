@@ -13,6 +13,7 @@ public:
   explicit MatchingEngine(IMarketDataSink &sink) : m_marketDataSink(sink) {};
 
   // Note: OrderID is per instrument and not compaitable across instruments!
+  // TODO: Order is mutated in this call. Should this be changed?
   std::vector<TradeEvent> PlaceOrder(InstrumentId instrument, Side side,
                                      Order &params);
 
