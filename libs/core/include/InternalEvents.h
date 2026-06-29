@@ -13,7 +13,6 @@ struct TradeEvent {
   OrderId restingId;       // ID of taken order, maker.
   Side aggressorSide;
   Quantity restingRemaining; //  if 0, order has been fulfilled and removed
-  std::chrono::system_clock::time_point timeStamp;
 };
 
 struct OrderAddedEvent {
@@ -29,8 +28,14 @@ struct OrderRemovedEvent {
   OrderId orderId;
 };
 
-// Note: A modify event is not needed because a modify is
-// essentially a remove + add
-
 using InternalEvent =
     std::variant<TradeEvent, OrderAddedEvent, OrderRemovedEvent>;
+
+struct FeedMessage {
+  std::uint64_t seq; // monotonic, for gap detection
+  std::chrono::system_clock::time_point timeStamp; // shared a batch of events
+  InternalEvent payload; // the variant: Trade / Added / Removed
+};
+// Note: A modify event is not needed because a modify is
+// essentially a remove + add
+//

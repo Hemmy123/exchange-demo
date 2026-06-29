@@ -1,12 +1,11 @@
 #include "OrderBook.h"
+#include "InternalEvents.h"
 #include "Types.h"
 
 #include <numeric>
 #include <optional>
 #include <print>
 #include <vector>
-
-namespace OrderBookHelpers {}
 
 std::optional<Price> OrderBook::BestBid() const {
   if (m_bidsMap.empty()) {
@@ -241,7 +240,7 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
 
     // TODO: Placeholder logic for tracking what trades have happened
     // This will be replaced later.
-    m_tradeEvents.emplace_back(TradeEvent{
+    auto tradeEvent = TradeEvent{
         .tradeId = 0, // engine stamps later
         .instrumentId = m_instrument,
         .restingPrice = oldestResting.price,
@@ -250,8 +249,9 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
         .restingId = oldestResting.id,
         .aggressorSide = aggressorSide,
         .restingRemaining = oldestResting.qty,
-        .timeStamp = {}, // same as id, engine stamps later
-    });
+    };
+
+    m_internalEvents.push_back(tradeEvent);
 
     if (oldestResting.qty == 0) {
       m_orders_map.erase(oldestResting.id); // keep the index consistent
@@ -260,8 +260,8 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
   }
 }
 
-std::vector<TradeEvent> OrderBook::DrainTrades() {
-  auto out = std::move(m_tradeEvents);
-  m_tradeEvents.clear();
+std::vector<InternalEvent> OrderBook::DrainInteralEvents() {
+  auto out = std::move(m_internalEvents);
+  m_internalEvents.clear();
   return out;
 }

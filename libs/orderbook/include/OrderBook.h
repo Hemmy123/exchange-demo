@@ -50,7 +50,7 @@ public:
 
   void Print() const;
 
-  std::vector<TradeEvent> DrainTrades();
+  std::vector<InternalEvent> DrainInteralEvents();
 
 private:
   InstrumentId m_instrument;
@@ -69,7 +69,7 @@ private:
 
   // TODO: Placeholder vector to keep track of what trades have
   // happened. This will be replaced later
-  std::vector<TradeEvent> m_tradeEvents;
+  std::vector<InternalEvent> m_internalEvents;
 
   template <typename BookSide>
   void AddToSide(BookSide &book, Side side, const Order params);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IMarketDataSink.h"
+#include "IInternalEventSink.h"
 #include "InternalEvents.h"
 #include "MarketDataEvents.h"
 #include "Types.h"
@@ -10,10 +10,11 @@ struct IMarketDataTransport {
   virtual ~IMarketDataTransport() = default;
 };
 
-class MarketDataPublisher : public IMarketDataSink {
+class MarketDataPublisher : public IEventSink {
 public:
   MarketDataPublisher(IMarketDataTransport &transport)
       : m_transport(transport) {};
+
   void Publish(const InternalEvent &ev) override;
 
 private:
