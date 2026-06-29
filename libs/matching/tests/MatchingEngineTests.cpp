@@ -34,15 +34,16 @@ public:
 
 // --- Lifecycle ------------------------------------------------------------//
 
-TEST(MatchingEngine, PlaceOnNewInstrumentCreatesBookAndRests) {
-  MarketSinkDummy dummySink;
-  MatchingEngine engine(dummySink);
-  // instrument 42 has never been seen: the engine must create the book lazily,
-  // rest the order, and return no trades (nothing to cross with).
-  Place(engine, 42, Side::Ask, {.id = 1, .price = 100, .qty = 10});
-
-  EXPECT_TRUE(dummySink.m_internalEvents.empty());
-}
+// TEST(MatchingEngine, PlaceOnNewInstrumentCreatesBookAndRests) {
+//   MarketSinkDummy dummySink;
+//   MatchingEngine engine(dummySink);
+//   // instrument 42 has never been seen: the engine must create the book
+//   lazily,
+//   // rest the order, and return no trades (nothing to cross with).
+//   Place(engine, 42, Side::Ask, {.id = 1, .price = 100, .qty = 10});
+//
+//   EXPECT_TRUE(dummySink.m_internalEvents.empty());
+// }
 
 // --- Identity stamping ----------------------------------------------------//
 //

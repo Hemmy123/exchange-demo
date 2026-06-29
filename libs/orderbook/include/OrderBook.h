@@ -98,4 +98,11 @@ void OrderBook::AddToSide(BookSide &book, Side side, const Order params) {
       OrderLocation{.side = side,
                     .levelIter = priceLevelIter,
                     .orderIt = std::prev(priceList.end())};
+  OrderAddedEvent addedEvent{.instrumentId = m_instrument,
+                             .orderId = params.id,
+                             .side = side,
+                             .price = params.price,
+                             .qty = params.qty};
+
+  m_internalEvents.push_back(addedEvent);
 }
