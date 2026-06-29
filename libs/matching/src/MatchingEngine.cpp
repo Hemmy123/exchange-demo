@@ -15,7 +15,10 @@ void MatchingEngine::PlaceOrder(InstrumentId instrument, Side side,
   // Note: One order can result in multiple events happening.
   auto internalEvents = book.DrainInteralEvents();
 
-  for (const auto &event : internalEvents) {
+  for (auto &event : internalEvents) {
+    if (auto *tradeEvent = std::get_if<TradeEvent>(&event)) {
+      tradeEvent->tradeId = m_nextTradeId++;
+    }
     m_internalEventsSink.Publish(event);
   }
 }
