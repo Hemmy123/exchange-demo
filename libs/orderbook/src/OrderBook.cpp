@@ -130,6 +130,7 @@ bool OrderBook::Delete(const OrderId id) {
     auto &book = (orderLocation.side == Side::Bid) ? m_bidsMap : m_askMap;
     book.erase(orderLocation.levelIter);
   }
+
   OrderRemovedEvent orderRemovedEvent{.instrumentId = m_instrument,
                                       .orderId = id};
 

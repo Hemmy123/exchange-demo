@@ -8,6 +8,7 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 class TradeEvent;
 
@@ -90,6 +91,7 @@ private:
 
 template <typename BookSide>
 void OrderBook::AddToSide(BookSide &book, Side side, const Order params) {
+
   auto priceLevelIter = book.try_emplace(params.price).first;
   auto &priceList = priceLevelIter->second;
   priceList.emplace_back(params.id, params.price, params.qty);
@@ -98,6 +100,7 @@ void OrderBook::AddToSide(BookSide &book, Side side, const Order params) {
       OrderLocation{.side = side,
                     .levelIter = priceLevelIter,
                     .orderIt = std::prev(priceList.end())};
+
   OrderAddedEvent addedEvent{.instrumentId = m_instrument,
                              .orderId = params.id,
                              .side = side,

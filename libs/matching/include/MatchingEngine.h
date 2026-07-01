@@ -1,16 +1,16 @@
 #pragma once
 
 #include "IInternalEventSink.h"
-#include "InternalEvents.h"
+#include "OrderBook.h"
 #include "Types.h"
 
+#include <optional>
 #include <unordered_map>
-
-class OrderBook;
 
 class MatchingEngine {
 public:
-  explicit MatchingEngine(IEventSink &sink) : m_internalEventsSink(sink) {};
+  explicit MatchingEngine(IInteralEventSink &sink)
+      : m_internalEventsSink(sink) {};
 
   // Note: OrderID is per instrument and not compaitable across instruments!
   // TODO: Order is mutated in this call. Should this be changed?
@@ -33,7 +33,7 @@ public:
 private:
   std::unordered_map<InstrumentId, OrderBook> m_books;
 
-  IEventSink &m_internalEventsSink;
+  IInteralEventSink &m_internalEventsSink;
 
   // 0 reserved for invalid
   TradeId m_nextTradeId{1};

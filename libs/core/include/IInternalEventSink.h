@@ -1,7 +1,7 @@
 #pragma once
 #include "InternalEvents.h"
 
-struct IEventSink {
+struct IInteralEventSink {
   virtual void Publish(const InternalEvent &ev) = 0;
-  virtual ~IEventSink() = default;
+  virtual ~IInteralEventSink() = default;
 };

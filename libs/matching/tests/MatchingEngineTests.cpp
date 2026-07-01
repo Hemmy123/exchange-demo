@@ -17,7 +17,7 @@ void Place(MatchingEngine &engine, InstrumentId instrument, Side side,
 
 // MatchingEngine requires an IEventSink to be passed in.
 // We don't need to test publishing logic here so we just pass in a dummy.
-class MarketSinkDummy : public IEventSink {
+class MarketSinkDummy : public IInteralEventSink {
 public:
   void Publish(const InternalEvent &ev) override {
     m_internalEvents.push_back(ev);

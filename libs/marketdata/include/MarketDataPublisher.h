@@ -1,24 +1,18 @@
 #pragma once
 
-#include "IInternalEventSink.h"
-#include "InternalEvents.h"
-#include "MarketDataEvents.h"
-#include "Types.h"
+#include "FeedMessage.h"
+#include "IMarketDataSink.h"
+#include "IMarketDataTransport.h"
 
-struct IMarketDataTransport {
-  virtual void Send(const MarketDataEvent &ev) = 0;
-  virtual ~IMarketDataTransport() = default;
-};
-
-class MarketDataPublisher : public IEventSink {
+class MarketDataPublisher : public IMarketDataSink {
 public:
   MarketDataPublisher(IMarketDataTransport &transport)
       : m_transport(transport) {};
 
-  void Publish(const InternalEvent &ev) override;
+  void Publish(const FeedMessage &ev) override;
 
 private:
-  SeqNum m_nextSeq{1}; // 0 reserved for invalid
-
   IMarketDataTransport &m_transport;
 };
+
+///////////// scratch work /////////////////////
