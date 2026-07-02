@@ -2,6 +2,7 @@
 #include "Types.h"
 #include <array>
 #include <gtest/gtest.h>
+#include <numeric>
 #include <optional>
 
 // ------------------ Default dataset ---------------------------//
@@ -60,19 +61,18 @@ void PlaceAllDefaultOrders(OrderBook &book) {
 }
 
 // Compares elements of both maps. O(N)
-bool CompareBookMap(const std::map<Price, OrderList> &left,
-                    const std::map<Price, OrderList> &right) {
+bool CompareBookMap(const BookSide &left, const BookSide &right) {
 
   for (const auto &elem : left) {
     auto leftPrice = elem.first;
-    const auto &leftList = elem.second;
+    const auto &leftList = elem.second.orders;
 
     // check keys
     if (right.contains(leftPrice) == false)
       return false;
 
     // compare lists
-    const auto &rightList = right.at(leftPrice);
+    const auto &rightList = right.at(leftPrice).orders;
     if (leftList != rightList)
       return false;
   }
@@ -86,19 +86,51 @@ struct OrderBookTestPeer {
   static auto &Orders(OrderBook &book) { return book.m_orders_map; }
   static auto &Bids(OrderBook &book) { return book.m_bidsMap; }
   static auto &Asks(OrderBook &book) { return book.m_askMap; }
+
+  static void CheckLevelTotalsConsistent(OrderBook &book) {
+    auto checkSide = [&](const BookSide &side, Side s) {
+      for (const auto &[price, level] : side) {
+
+        // Sum each level manually
+        Quantity summed = std::accumulate(
+            level.orders.cbegin(), level.orders.cend(), Quantity{0},
+            [](Quantity acc, const Order &o) { return acc + o.qty; });
+
+        // Check manually summed against the cached quantity
+        EXPECT_EQ(level.totalQty, summed)
+            << "cached total diverged at " << (s == Side::Bid ? "bid " : "ask ")
+            << price;
+      }
+    };
+    checkSide(book.m_bidsMap, Side::Bid);
+    checkSide(book.m_askMap, Side::Ask);
+  }
+};
+
+class OrderBookTestFixture : public testing::Test {
+protected:
+  OrderBook book{0};
+
+  void SetUp() override { book = InitBook(); }
+
+  void TearDown() override {
+    // GoogleTest still runs TearDown even if a test fails with a fatal
+    // assertion. If this happens we don't want to check for level consistency
+    // because chances
+    if (!HasFailure()) {
+      OrderBookTestPeer::CheckLevelTotalsConsistent(book);
+    }
+  }
 };
 // --------------------------------------------------------------//
 
-TEST(OrderBook, EmptyBook) {
-  auto book = InitBook();
-
+TEST_F(OrderBookTestFixture, EmptyBook) {
   EXPECT_FALSE(book.BestAsk().has_value());
   EXPECT_FALSE(book.BestBid().has_value());
   EXPECT_FALSE(book.Spread().has_value());
 }
 
-TEST(OrderBook, BestAskFromList) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, BestAskFromList) {
   PlaceDefaultAskOrders(book);
 
   auto bestAsk = book.BestAsk();
@@ -106,8 +138,7 @@ TEST(OrderBook, BestAskFromList) {
   EXPECT_EQ(bestAsk.value(), 101);
 }
 
-TEST(OrderBook, BestBidFromList) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, BestBidFromList) {
   PlaceDefaultBidOrders(book);
 
   auto bestBid = book.BestBid();
@@ -115,10 +146,9 @@ TEST(OrderBook, BestBidFromList) {
   EXPECT_EQ(bestBid.value(), 99);
 }
 
-TEST(OrderBook, BestAskAndBidOrders) {
+TEST_F(OrderBookTestFixture, BestAskAndBidOrders) {
   // Testing if the BestBidOrder/BestAskOrder functions
   // return the same price as the BestBid/BestAsk functions
-  auto book = InitBook();
   PlaceAllDefaultOrders(book);
   book.Print();
   auto bestAsk = book.BestAsk();
@@ -136,8 +166,7 @@ TEST(OrderBook, BestAskAndBidOrders) {
   EXPECT_EQ(bestBid.value(), bestBidOrder.value().price);
 }
 
-TEST(OrderBook, BookSpread) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, BookSpread) {
   PlaceAllDefaultOrders(book);
 
   auto spread = book.Spread();
@@ -151,8 +180,7 @@ TEST(OrderBook, BookSpread) {
 // Modify function has a few branches so we need to
 // check they all get executed
 
-TEST(OrderBook, ModifyUnknownID) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, ModifyUnknownID) {
   book.PlaceOrder(Side::Bid, {.id = g_orderId, .price = 100, .qty = 10});
 
   // Modify unkonwn ID should do nothing;
@@ -163,12 +191,11 @@ TEST(OrderBook, ModifyUnknownID) {
   EXPECT_FALSE(book.BestAsk().has_value());      // nothing leaked onto asks
 }
 
-TEST(OrderBook, ModifyOrderSameValuesNoOp) {
+TEST_F(OrderBookTestFixture, ModifyOrderSameValuesNoOp) {
   // Testing the following from the modify function:
   // - Modifying the price/order with the same value shouldn't change anything
   // - Modifying the price/order with the nullopt values shouldn't change
   // anything
-  auto book = InitBook();
   PlaceAllDefaultOrders(book);
 
   auto asksBefore = OrderBookTestPeer::Asks(book);
@@ -200,8 +227,7 @@ TEST(OrderBook, ModifyOrderSameValuesNoOp) {
   EXPECT_TRUE(CompareBookMap(bidsBefore, bidsAfter));
 }
 
-TEST(OrderBook, QuantityAtPrice) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, QuantityAtPrice) {
   PlaceAllDefaultOrders(book);
 
   auto totalAskQty = book.QuantityAtPrice(Side::Ask, 102);
@@ -219,8 +245,7 @@ TEST(OrderBook, QuantityAtPrice) {
 // These exercise the crossing path: sweeping a full level, partially
 // filling the next resting order, and resting any leftover quantity.
 
-TEST(OrderBook, MatchBidCrossesAndClearsLevel) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, MatchBidCrossesAndClearsLevel) {
   PlaceAllDefaultOrders(book);
 
   // A Bid that only crosses the ask side must leave bids untouched.
@@ -263,8 +288,7 @@ TEST(OrderBook, MatchBidCrossesAndClearsLevel) {
   EXPECT_TRUE(CompareBookMap(bidsBefore, bidsAfter));
 }
 
-TEST(OrderBook, MatchBidCrossesWithRestingRemainder) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, MatchBidCrossesWithRestingRemainder) {
   PlaceAllDefaultOrders(book);
 
   // Incoming BUY: price 103, qty 1000. Walks asks cheapest-first:
@@ -296,8 +320,7 @@ TEST(OrderBook, MatchBidCrossesWithRestingRemainder) {
   EXPECT_TRUE(book.Contains(5));
 }
 
-TEST(OrderBook, MatchAskCrossesAndClearsLevel) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, MatchAskCrossesAndClearsLevel) {
   PlaceAllDefaultOrders(book);
 
   // An Ask that only crosses the bid side must leave asks untouched.
@@ -341,8 +364,7 @@ TEST(OrderBook, MatchAskCrossesAndClearsLevel) {
   EXPECT_TRUE(CompareBookMap(asksBefore, asksAfter));
 }
 
-TEST(OrderBook, MatchAskCrossesWithRestingRemainder) {
-  auto book = InitBook();
+TEST_F(OrderBookTestFixture, MatchAskCrossesWithRestingRemainder) {
   PlaceAllDefaultOrders(book);
 
   // Incoming SELL: price 96, qty 1300. Walks bids highest-first:
@@ -374,9 +396,7 @@ TEST(OrderBook, MatchAskCrossesWithRestingRemainder) {
   EXPECT_TRUE(book.Contains(12));
 }
 
-TEST(OrderBook, DeleteLastBidAtLevelRemovesLevel) {
-  auto book = InitBook();
-
+TEST_F(OrderBookTestFixture, DeleteLastBidAtLevelRemovesLevel) {
   // Two bid levels: 100 (one order) and 99 (one order)
   OrderId id100 = g_orderId++;
   OrderId id99 = g_orderId++;
@@ -395,9 +415,7 @@ TEST(OrderBook, DeleteLastBidAtLevelRemovesLevel) {
   EXPECT_EQ(book.BestBid().value(), Price{99});
 }
 
-TEST(OrderBook, DeleteLastAskAtLevelRemovesLevel) {
-  auto book = InitBook();
-
+TEST_F(OrderBookTestFixture, DeleteLastAskAtLevelRemovesLevel) {
   // Two ask levels: 100 (one order) and 101 (one order)
   OrderId id100 = g_orderId++;
   OrderId id101 = g_orderId++;
@@ -416,7 +434,19 @@ TEST(OrderBook, DeleteLastAskAtLevelRemovesLevel) {
   EXPECT_EQ(book.BestAsk().value(), Price{101});
 }
 
-// TEST(OrderBook, NormalUsageTest) { EXPECT_TRUE(false); }
+// TEST_F(OrderBookTestFixture, NormalUsageTest) { EXPECT_TRUE(false); }
+TEST_F(OrderBookTestFixture, CachedTotalsSurviveCancels) {
+  book.PlaceOrder(Side::Bid, {.id = 1, .price = 100, .qty = 10});
+  book.PlaceOrder(Side::Bid, {.id = 2, .price = 100, .qty = 5});
+  OrderBookTestPeer::CheckLevelTotalsConsistent(book); // Bid: 100: 10 -> 5
+
+  book.Delete(1);
+  OrderBookTestPeer::CheckLevelTotalsConsistent(book); // Bid: 100: 5
+
+  book.PlaceOrder(Side::Ask,
+                  {.id = 3, .price = 100, .qty = 12}); // crossing order
+  OrderBookTestPeer::CheckLevelTotalsConsistent(book); // Ask: 100: 7
+}
 
 // Tests to write:
 // Continous usage (read world usage):

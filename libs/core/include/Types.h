@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <list>
+#include <map>
 
 using OrderId = uint64_t;
 using TradeId = uint64_t;
@@ -20,5 +21,14 @@ struct Order {
 };
 
 using OrderList = std::list<Order>;
+
+// This use used so we can cache the total quantity available at a price level.
+// This is requied to sent out level updates for each price
+struct PriceLevel {
+  Quantity totalQty = 0;
+  OrderList orders;
+};
+
+using BookSide = std::map<Price, PriceLevel>;
 
 enum class Side { Bid, Ask };

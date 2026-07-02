@@ -56,13 +56,12 @@ public:
 private:
   InstrumentId m_instrument;
 
-  std::map<Price, OrderList> m_bidsMap;
-
-  std::map<Price, OrderList> m_askMap;
+  BookSide m_bidsMap;
+  BookSide m_askMap;
 
   struct OrderLocation {
     Side side;
-    std::map<Price, OrderList>::iterator levelIter;
+    BookSide::iterator levelIter;
     OrderList::iterator orderIt;
   };
 
@@ -81,7 +80,7 @@ private:
 
   void MatchAgainstBids(Order &incoming);
 
-  void FillLevel(Side aggressorside, Order &incoming, OrderList &restingList);
+  void FillLevel(Side aggressorside, Order &incoming, PriceLevel &priceList);
 
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;
@@ -89,12 +88,15 @@ private:
 
 // ====== template definitions ===== //
 
-template <typename BookSide>
-void OrderBook::AddToSide(BookSide &book, Side side, const Order params) {
+template <typename Book>
+void OrderBook::AddToSide(Book &book, Side side, const Order params) {
 
   auto priceLevelIter = book.try_emplace(params.price).first;
-  auto &priceList = priceLevelIter->second;
+  auto &level = priceLevelIter->second;
+  auto &priceList = level.orders;
+
   priceList.emplace_back(params.id, params.price, params.qty);
+  level.totalQty += params.qty;
 
   m_orders_map[params.id] =
       OrderLocation{.side = side,

@@ -30,7 +30,7 @@ std::optional<Order> OrderBook::BestBidOrder() const {
     return {};
   }
 
-  return m_bidsMap.rbegin()->second.front();
+  return m_bidsMap.rbegin()->second.orders.front();
 }
 
 std::optional<Order> OrderBook::BestAskOrder() const {
@@ -38,7 +38,7 @@ std::optional<Order> OrderBook::BestAskOrder() const {
     return {};
   }
 
-  return m_askMap.begin()->second.front();
+  return m_askMap.begin()->second.orders.front();
 }
 
 std::optional<Price> OrderBook::Spread() const {
@@ -116,13 +116,18 @@ bool OrderBook::Modify(const OrderId id, std::optional<Price> newPrice,
 
 bool OrderBook::Delete(const OrderId id) {
 
-  // make a separate DeleteInternal for both delete and Modify to use?
-  if (m_orders_map.contains(id) == false) {
+  auto iter = m_orders_map.find(id);
+  if (iter == m_orders_map.end()) {
     return false;
   }
 
-  const auto &orderLocation = m_orders_map.at(id);
-  auto &list = orderLocation.levelIter->second;
+  const auto orderLocation = iter->second;
+  auto &priceLevel = orderLocation.levelIter->second;
+  auto qtyToRemove = orderLocation.orderIt->qty;
+
+  priceLevel.totalQty -= qtyToRemove;
+
+  auto &list = priceLevel.orders;
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
 
@@ -146,11 +151,7 @@ std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
     return {};
   }
 
-  const auto &priceList = book.at(price);
-
-  return std::accumulate(
-      priceList.cbegin(), priceList.cend(), Quantity{0},
-      [](Quantity sum, const Order &order) { return sum + order.qty; });
+  return book.at(price).totalQty;
 }
 
 bool OrderBook::Contains(OrderId orderId) const {
@@ -165,7 +166,7 @@ void OrderBook::Print() const {
   for (auto elem : m_bidsMap) {
 
     std::print("Price {}: ", elem.first);
-    for (const auto &order : elem.second) {
+    for (const auto &order : elem.second.orders) {
       std::print("[ID: {}, Price {}, Quantity: {}], ", order.id, order.price,
                  order.qty);
     }
@@ -176,7 +177,7 @@ void OrderBook::Print() const {
   for (auto elem : m_askMap) {
 
     std::print("Price {}: ", elem.first);
-    for (const auto &order : elem.second) {
+    for (const auto &order : elem.second.orders) {
       std::print("[ID: {}, Price {}, Quantity: {}], ", order.id, order.price,
                  order.qty);
     }
@@ -197,11 +198,13 @@ void OrderBook::MatchAgainstAsks(Order &incoming) {
   while (incoming.qty > 0 &&                        // has remaining orders
          bestAskIter != m_askMap.end() &&         // has price
          bestAskIter->first <= incoming.price) {  // is best price
-
     // clang-format on
-    auto &ordersList = bestAskIter->second;
 
-    FillLevel(Side::Bid, incoming, ordersList);
+    auto &priceLevel = bestAskIter->second;
+
+    auto &ordersList = priceLevel.orders;
+
+    FillLevel(Side::Bid, incoming, priceLevel);
 
     // if we've exausted the orders in the list then we
     // need to remove the list
@@ -227,7 +230,7 @@ void OrderBook::MatchAgainstBids(Order &incoming) {
 
     FillLevel(Side::Ask, incoming, bestBidIter->second);
 
-    if (bestBidIter->second.empty()) {
+    if (bestBidIter->second.orders.empty()) {
       m_bidsMap.erase(bestBidIter);
     } else {
       break;
@@ -236,13 +239,16 @@ void OrderBook::MatchAgainstBids(Order &incoming) {
 }
 
 void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
-                          OrderList &restingList) {
-  while (incoming.qty > 0 && !restingList.empty()) {
-    auto &oldestResting = restingList.front(); // FIFO: oldest first
+                          PriceLevel &priceLevel) {
+  while (incoming.qty > 0 && !priceLevel.orders.empty()) {
+    auto &oldestResting = priceLevel.orders.front(); // FIFO: oldest first
 
     Quantity traded = std::min(incoming.qty, oldestResting.qty);
     incoming.qty -= traded;
     oldestResting.qty -= traded;
+
+    // update cached value for total qty at this price leve.
+    priceLevel.totalQty -= traded;
 
     // TODO: Placeholder logic for tracking what trades have happened
     // This will be replaced later.
@@ -261,7 +267,7 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
 
     if (oldestResting.qty == 0) {
       m_orders_map.erase(oldestResting.id); // keep the index consistent
-      restingList.pop_front();
+      priceLevel.orders.pop_front();
     }
   }
 }
