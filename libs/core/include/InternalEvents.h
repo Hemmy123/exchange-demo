@@ -31,7 +31,7 @@ struct LevelChangedEvent {
   InstrumentId instrumentId;
   Side side;
   Price price;
-  Quantity qty; // if == 0, then that means that level has been removed
+  Quantity totalQty; // if == 0, then that means that level has been removed
 };
 
 // Note: A modify event is not needed because a modify is

@@ -42,16 +42,23 @@ std::vector<TradeEvent> FilterTrades(const std::vector<InternalEvent> &events) {
 // --- Lifecycle ------------------------------------------------------------//
 
 TEST(MatchingEngine, PlaceOnNewInstrumentCreatesBookAndRests) {
+
   MarketSinkDummy dummySink;
   MatchingEngine engine(dummySink);
+  constexpr InstrumentId instrument = 42;
   // instrument 42 has never been seen: the engine must create the book lazily,
   // rest the order, and publish no trades (nothing to cross with).
-  Place(engine, 42, Side::Ask, {.id = 1, .price = 100, .qty = 10});
+  Place(engine, instrument, Side::Ask, {.id = 1, .price = 100, .qty = 10});
 
-  // resting order: one OrderAddedEvent published, no trades
-  ASSERT_EQ(dummySink.m_internalEvents.size(), 1u);
-  EXPECT_TRUE(std::holds_alternative<OrderAddedEvent>(
+  // A single  add should trigger 2 events, added and level changed, which we
+  // check for explicitly below
+  ASSERT_EQ(dummySink.m_internalEvents.size(), 2u);
+
+  EXPECT_TRUE(std::holds_alternative<LevelChangedEvent>(
       dummySink.m_internalEvents.front()));
+
+  EXPECT_TRUE(std::holds_alternative<OrderAddedEvent>(
+      dummySink.m_internalEvents.back()));
 }
 
 // --- Identity stamping ----------------------------------------------------//

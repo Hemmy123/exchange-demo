@@ -4,6 +4,8 @@
 #include "Types.h"
 #include "Utils.h"
 
+#include <cstdint>
+#include <execution>
 #include <list>
 #include <map>
 #include <optional>
@@ -82,6 +84,9 @@ private:
 
   void FillLevel(Side aggressorside, Order &incoming, PriceLevel &priceList);
 
+  void AdjustLevel(Side side, Price price, PriceLevel &level,
+                   std::int64_t delta);
+
   // To enable whitebox testing of order book.
   friend struct OrderBookTestPeer;
 };
@@ -96,7 +101,6 @@ void OrderBook::AddToSide(Book &book, Side side, const Order params) {
   auto &priceList = level.orders;
 
   priceList.emplace_back(params.id, params.price, params.qty);
-  level.totalQty += params.qty;
 
   m_orders_map[params.id] =
       OrderLocation{.side = side,
@@ -108,6 +112,12 @@ void OrderBook::AddToSide(Book &book, Side side, const Order params) {
                              .side = side,
                              .price = params.price,
                              .qty = params.qty};
+
+  // Updates the quantity for a given price and book side. This encapsulated the
+  // change so we can also update the cached totalQty value and send out an
+  // event of the change happening. ALL changes to price levels should go
+  // through this function.
+  AdjustLevel(side, params.price, level, params.qty);
 
   m_internalEvents.push_back(addedEvent);
 }

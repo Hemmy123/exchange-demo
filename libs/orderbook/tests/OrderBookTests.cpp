@@ -87,14 +87,14 @@ struct OrderBookTestPeer {
   static auto &Bids(OrderBook &book) { return book.m_bidsMap; }
   static auto &Asks(OrderBook &book) { return book.m_askMap; }
 
-  static void CheckLevelTotalsConsistent(OrderBook &book) {
-    auto checkSide = [&](const BookSide &side, Side s) {
+  static void CheckLevelTotalsConsistent(const OrderBook &book) {
+    auto checkSide = [&](const BookSide &side, const Side s) {
       for (const auto &[price, level] : side) {
 
         // Sum each level manually
         Quantity summed = std::accumulate(
             level.orders.cbegin(), level.orders.cend(), Quantity{0},
-            [](Quantity acc, const Order &o) { return acc + o.qty; });
+            [](Quantity acc, const Order &order) { return acc + order.qty; });
 
         // Check manually summed against the cached quantity
         EXPECT_EQ(level.totalQty, summed)
@@ -102,6 +102,7 @@ struct OrderBookTestPeer {
             << price;
       }
     };
+
     checkSide(book.m_bidsMap, Side::Bid);
     checkSide(book.m_askMap, Side::Ask);
   }

@@ -123,23 +123,23 @@ bool OrderBook::Delete(const OrderId id) {
 
   const auto orderLocation = iter->second;
   auto &priceLevel = orderLocation.levelIter->second;
-  auto qtyToRemove = orderLocation.orderIt->qty;
-
-  priceLevel.totalQty -= qtyToRemove;
+  const auto qtyToRemove = orderLocation.orderIt->qty;
+  const auto side = orderLocation.side;
+  const auto price = orderLocation.orderIt->price;
 
   auto &list = priceLevel.orders;
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
 
+  m_internalEvents.push_back(
+      OrderRemovedEvent{.instrumentId = m_instrument, .orderId = id});
+
+  AdjustLevel(side, price, priceLevel, -qtyToRemove);
+
   if (list.empty()) {
     auto &book = (orderLocation.side == Side::Bid) ? m_bidsMap : m_askMap;
     book.erase(orderLocation.levelIter);
   }
-
-  OrderRemovedEvent orderRemovedEvent{.instrumentId = m_instrument,
-                                      .orderId = id};
-
-  m_internalEvents.push_back(orderRemovedEvent);
 
   return true;
 }
@@ -241,17 +241,17 @@ void OrderBook::MatchAgainstBids(Order &incoming) {
 void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
                           PriceLevel &priceLevel) {
   while (incoming.qty > 0 && !priceLevel.orders.empty()) {
+
     auto &oldestResting = priceLevel.orders.front(); // FIFO: oldest first
+    const auto price = oldestResting.price;
+    const auto restingSide =
+        (aggressorSide == Side::Bid) ? Side::Ask : Side::Bid;
 
     Quantity traded = std::min(incoming.qty, oldestResting.qty);
+
     incoming.qty -= traded;
     oldestResting.qty -= traded;
 
-    // update cached value for total qty at this price leve.
-    priceLevel.totalQty -= traded;
-
-    // TODO: Placeholder logic for tracking what trades have happened
-    // This will be replaced later.
     auto tradeEvent = TradeEvent{
         .tradeId = 0, // engine stamps later
         .instrumentId = m_instrument,
@@ -262,8 +262,16 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
         .aggressorSide = aggressorSide,
         .restingRemaining = oldestResting.qty,
     };
-
     m_internalEvents.push_back(tradeEvent);
+
+    // Adjust the level of the resting side. The resting level is being
+    // subtracted from so we pass in -traded.
+    //
+    // NOTE: This sends out a LevelChangedEvent. Being in a while loop, a large
+    // order that walks the book may send out many events from here. An
+    // optimization later on could be to combine all these events by letting the
+    // trade fully resolve and then send out one level changed event.
+    AdjustLevel(restingSide, price, priceLevel, -traded);
 
     if (oldestResting.qty == 0) {
       m_orders_map.erase(oldestResting.id); // keep the index consistent
@@ -276,4 +284,18 @@ std::vector<InternalEvent> OrderBook::DrainInteralEvents() {
   auto out = std::move(m_internalEvents);
   m_internalEvents.clear();
   return out;
+}
+
+void OrderBook::AdjustLevel(Side side, Price price, PriceLevel &level,
+                            std::int64_t delta) {
+
+  // Just adding delta here. We need the ugly casting sadly because delta could
+  // move up or down so we need a signed int
+  level.totalQty =
+      static_cast<Quantity>(static_cast<std::int64_t>(level.totalQty) + delta);
+
+  m_internalEvents.push_back(LevelChangedEvent{.instrumentId = m_instrument,
+                                               .side = side,
+                                               .price = price,
+                                               .totalQty = level.totalQty});
 }
