@@ -1,5 +1,6 @@
 
-add_executable(feed_tests FeedTests.cpp)
+add_executable(feed_tests FeedTests.cpp
+SequencerTests.cpp)
 
 target_link_libraries(feed_tests
 	PRIVATE
