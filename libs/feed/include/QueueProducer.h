@@ -11,5 +11,5 @@ public:
   void Publish(const InternalEvent &event);
 
 private:
-  InternalEventQueue& m_internalEventQueue;
+  InternalEventQueue &m_internalEventQueue;
 };

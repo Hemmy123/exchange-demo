@@ -17,34 +17,11 @@ void MarketDataPublisher::Publish(const FeedMessage &ev) {
                                    .agressorSide = tradeEvent->aggressorSide,
                                    .tradeId = tradeEvent->tradeId};
   };
-  if (const auto *addedEvent = std::get_if<OrderAddedEvent>(&ev.payload)) {
-    // marketDataEvent.instrumentad = addedEvent->instrumentId;
-    // marketDataEvent.body = MdTrade{0, 0, Side::Ask, 0};
-    // marketDataEvent.body = MdLevelUpdate{.side = addedEvent->side,
-    //                                      .price = addedEvent->price,
-    //                                      .totalQty = addedEvent->qty};
-  }
-  if (const auto *removedEvent = std::get_if<OrderRemovedEvent>(&ev.payload)) {
-
-    // marketDataEvent.instrumentId = removedEvent->instrumentId;
-    // marketDataEvent.body = MdTrade{0, 0, Side::Ask, 0};
-    // marketDataEvent.body = MdLevelUpdate{.side = removedEvent->side,
-    //                                      .price = removedEvent->price,
-    //                                      .totalQty = 0};
-    //
+  if (const auto *levelEvent = std::get_if<LevelChangedEvent>(&ev.payload)) {
+    marketDataEvent.instrumentId = levelEvent->instrumentId;
+    marketDataEvent.body = MdLevelUpdate{.side = levelEvent->side,
+                                         .price = levelEvent->price,
+                                         .totalQty = levelEvent->totalQty};
   }
   m_transport.Send(marketDataEvent);
 }
-//
-// struct MdTrade {
-//   Price price;
-//   Quantity qty;
-//   Side agressorSide;
-//   TradeId tradeId;
-// };
-//
-// struct MdLevelUpdate {
-//   Side side;
-//   Price price;
-//   Quantity totalQty;
-// };

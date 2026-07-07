@@ -1,172 +1,73 @@
-#include "InternalEvents.h"
-#include "MarketDataEvents.h"
+#include "FeedMessage.h"    // FeedMessage { seq, timeStamp, payload }  (core)
+#include "InternalEvents.h" // InternalEvent, LevelChangedEvent          (core)
+#include "MarketDataEvents.h" // MarketDataEvent, MdLevelUpdate, IMarketDataTransport
 #include "MarketDataPublisher.h"
-#include "Types.h"
-#include <chrono>
+#include "Types.h" // SeqNum, Side, Price, Quantity
 #include <gtest/gtest.h>
+#include <utility>
 #include <variant>
 #include <vector>
 
 namespace {
 
-// Records what the publisher would have sent, so we can assert on it.
-struct CollectingTransport : IMarketDataTransport {
-  std::vector<MarketDataEvent> sent;
-  void Send(const MarketDataEvent &ev) override { sent.push_back(ev); }
+// Captures every MarketDataEvent the publisher forwarded.
+class CapturingTransport : public IMarketDataTransport {
+public:
+  void Send(const MarketDataEvent &ev) override { events.push_back(ev); }
+  std::vector<MarketDataEvent> events;
 };
+
+// Frame an InternalEvent the way the publisher expects to receive it, without
+// pulling in feed's Sequencer. The seq is ours to pick here: *generating* it is
+// the Sequencer's job (tested in libs/feed); *propagating* it is the
+// publisher's.
+FeedMessage framed(SeqNum seq, InternalEvent payload) {
+  return FeedMessage{
+      .seq = seq, .timeStamp = {}, .payload = std::move(payload)};
+}
 
 } // namespace
 
-// --- Normalization --------------------------------------------------------//
+TEST(MarketData, LevelChangedProjectsToMdLevelUpdate) {
+  CapturingTransport transport;
+  MarketDataPublisher publisher{transport};
 
-// TEST(MarketDataPublisher, TradeNormalizedToMdTrade) {
-//   CollectingTransport transport;
-//   MarketDataPublisher publisher{transport};
-//
-//   TradeEvent trade{
-//       .tradeId = 7,
-//       .instrumentId = 7,
-//       .restingPrice = 100,
-//       .quantityTraded = 4,
-//       .aggressorId = 20,
-//       .restingId = 10,
-//       .aggressorSide = Side::Bid,
-//       .restingRemaining = 0,
-//   };
-//
-//   auto before = std::chrono::system_clock::now();
-//   publisher.Publish(trade);
-//   auto after = std::chrono::system_clock::now();
-//
-//   ASSERT_EQ(transport.sent.size(), 1u);
-//   const auto &md = transport.sent.front();
-//
-//   EXPECT_EQ(md.seqNum, 1u); // first published -> seq 1
-//   EXPECT_EQ(md.instrumentId, 7u);
-//   EXPECT_GE(md.timeStamp, before); // publisher stamps at send time
-//   EXPECT_LE(md.timeStamp, after);
-//
-//   ASSERT_TRUE(std::holds_alternative<MdTrade>(md.body));
-//   const auto &t = std::get<MdTrade>(md.body);
-//   EXPECT_EQ(t.price, 100u);
-//   EXPECT_EQ(t.qty, 4u);
-//   EXPECT_EQ(t.agressorSide, Side::Bid);
-//   EXPECT_EQ(t.tradeId, 7u);
-//   // The public type structurally has no order ids — privacy is enforced by
-//   // the type, not a runtime check.
-// }
-//
-// // --- Sequencing
-// -----------------------------------------------------------//
-//
-// TEST(MarketDataPublisher, SequenceNumbersIncrementPerPublishedEvent) {
-//   CollectingTransport transport;
-//   MarketDataPublisher publisher{transport};
-//
-//   publisher.Publish(TradeEvent{.tradeId = 1,
-//                                .instrumentId = 1,
-//                                .restingPrice = 100,
-//                                .quantityTraded = 10,
-//                                .aggressorId = 1,
-//                                .restingId = 2,
-//                                .aggressorSide = Side::Bid,
-//                                .restingRemaining = 0});
-//   publisher.Publish(TradeEvent{.tradeId = 2,
-//                                .instrumentId = 1,
-//                                .restingPrice = 101,
-//                                .quantityTraded = 5,
-//                                .aggressorId = 3,
-//                                .restingId = 4,
-//                                .aggressorSide = Side::Bid,
-//                                .restingRemaining = 0});
-//   publisher.Publish(TradeEvent{.tradeId = 3,
-//                                .instrumentId = 1,
-//                                .restingPrice = 102,
-//                                .quantityTraded = 1,
-//                                .aggressorId = 5,
-//                                .restingId = 6,
-//                                .aggressorSide = Side::Bid,
-//                                .restingRemaining = 0});
-//
-//   ASSERT_EQ(transport.sent.size(), 3u);
-//   EXPECT_EQ(transport.sent[0].seqNum, 1u);
-//   EXPECT_EQ(transport.sent[1].seqNum, 2u);
-//   EXPECT_EQ(transport.sent[2].seqNum, 3u);
-// }
-//
-// TEST(MarketDataPublisher, FilteredEventsDoNotConsumeSequenceNumbers) {
-//   CollectingTransport transport;
-//   MarketDataPublisher publisher{transport};
-//
-//   publisher.Publish(TradeEvent{.tradeId = 1,
-//                                .instrumentId = 1,
-//                                .restingPrice = 100,
-//                                .quantityTraded = 10,
-//                                .aggressorId = 1,
-//                                .restingId = 2,
-//                                .aggressorSide = Side::Bid,
-//                                .restingRemaining = 0}); // -> seq 1
-//   publisher.Publish(
-//       OrderAddedEvent{.instrumentId = 1,
-//                       .orderId = 3,
-//                       .side = Side::Ask,
-//                       .price = 105,
-//                       .qty = 50}); // not published, no seq consumed
-//
-//   publisher.Publish(TradeEvent{.tradeId = 2,
-//                                .instrumentId = 1,
-//                                .restingPrice = 100,
-//                                .quantityTraded = 5,
-//                                .aggressorId = 4,
-//                                .restingId = 5,
-//                                .aggressorSide = Side::Bid,
-//                                .restingRemaining = 0}); // -> seq 2, NOT 3
-//
-//   ASSERT_EQ(transport.sent.size(), 2u);
-//   EXPECT_EQ(transport.sent[0].seqNum, 1u);
-//   EXPECT_EQ(transport.sent[1].seqNum, 2u); // contiguous — no phantom gap
-// }
-//
-// TEST(MarketDataPublisher, NonTradeEventPublishesNothingYet) {
-//   CollectingTransport transport;
-//   MarketDataPublisher publisher{transport};
-//
-//   publisher.Publish(OrderRemovedEvent{.instrumentId = 1, .orderId = 9});
-//   EXPECT_TRUE(transport.sent.empty());
-// }
-//
-// TEST(MarketDataPublisher, EachPublisherHasIndependentSequence) {
-//   CollectingTransport tA, tB;
-//   MarketDataPublisher a{tA};
-//   MarketDataPublisher b{tB};
-//
-//   a.Publish(TradeEvent{.tradeId = 1,
-//                        .instrumentId = 1,
-//                        .restingPrice = 100,
-//                        .quantityTraded = 10,
-//                        .aggressorId = 1,
-//                        .restingId = 2,
-//                        .aggressorSide = Side::Bid,
-//                        .restingRemaining = 0}); // a -> seq 1
-//   a.Publish(TradeEvent{.tradeId = 2,
-//                        .instrumentId = 1,
-//                        .restingPrice = 100,
-//                        .quantityTraded = 10,
-//                        .aggressorId = 3,
-//                        .restingId = 4,
-//                        .aggressorSide = Side::Bid,
-//                        .restingRemaining = 0}); // a -> seq 2
-//   b.Publish(TradeEvent{.tradeId = 3,
-//                        .instrumentId = 1,
-//                        .restingPrice = 100,
-//                        .quantityTraded = 10,
-//                        .aggressorId = 5,
-//                        .restingId = 6,
-//                        .aggressorSide = Side::Bid,
-//                        .restingRemaining = 0}); // b -> seq 1
-//
-//   ASSERT_EQ(tA.sent.size(), 2u);
-//   ASSERT_EQ(tB.sent.size(), 1u);
-//   EXPECT_EQ(tA.sent[1].seqNum, 2u);
-//   EXPECT_EQ(tB.sent[0].seqNum, 1u);
-//}
+  InternalEvent ev = LevelChangedEvent{
+      .instrumentId = 1, .side = Side::Bid, .price = 100, .totalQty = 15};
+  publisher.Publish(framed(1, ev));
+
+  ASSERT_EQ(transport.events.size(), 1u);
+  const auto *md = std::get_if<MdLevelUpdate>(&transport.events[0].body);
+  ASSERT_NE(md, nullptr) << "body was not an MdLevelUpdate";
+  EXPECT_EQ(md->side, Side::Bid);
+  EXPECT_EQ(md->price, 100);
+  EXPECT_EQ(md->totalQty, 15);
+}
+
+TEST(MarketData, LevelGoneProjectsZeroQty) {
+  CapturingTransport transport;
+  MarketDataPublisher publisher{transport};
+
+  InternalEvent ev = LevelChangedEvent{
+      .instrumentId = 1, .side = Side::Ask, .price = 101, .totalQty = 0};
+  publisher.Publish(framed(1, ev));
+
+  ASSERT_EQ(transport.events.size(), 1u);
+  const auto *md = std::get_if<MdLevelUpdate>(&transport.events[0].body);
+  ASSERT_NE(md, nullptr);
+  EXPECT_EQ(md->totalQty, 0); // consumer erases the level on this
+}
+
+// The publisher forwards the seq it was handed, unchanged. Whether that seq is
+// gap-free is the Sequencer's contract, not this one's.
+TEST(MarketData, PublisherPreservesSeqNum) {
+  CapturingTransport transport;
+  MarketDataPublisher publisher{transport};
+
+  InternalEvent ev = LevelChangedEvent{
+      .instrumentId = 1, .side = Side::Bid, .price = 100, .totalQty = 10};
+  publisher.Publish(framed(42, ev));
+
+  ASSERT_EQ(transport.events.size(), 1u);
+  EXPECT_EQ(transport.events[0].seqNum, static_cast<SeqNum>(42));
+}

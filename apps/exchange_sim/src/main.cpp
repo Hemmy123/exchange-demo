@@ -37,22 +37,35 @@ public:
   std::size_t sendCount = 0;
 };
 
+/*
+ DataFlow (Top to bottom):
+========================================================================
+ Matching Engine (OrderBook)                            InternalEvent
+ QueueProducer (SPSC)                                   InternalEvent
+ FeedPump (Uses Sequencer to sequence InternalEvent)    InternalEvent
+ MarketDataPublisher                                    InternalEvent
+ MarketDataTransport                                    MarketDataEvent
+*/
+
 void ExchangeTest() {
-  InternalEventQueue queue; // shared across the (currently absent) boundary
 
-  QueueProducer producer(queue);   // IInternalEventSink: matching -> queue
-  MatchingEngine engine(producer); // drains book, forwards events to producer
+  // ======================= Setup ====================== //
+  InternalEventQueue queue;
 
-  Sequencer sequencer; // InternalEvent -> FeedMessage (+seq, +time)
+  QueueProducer producer(queue);
+  MatchingEngine engine(producer);
 
+  Sequencer sequencer;
   CountingTransport transport;
-  MarketDataPublisher publisher(transport); // real publisher  (sink #1)
-  RecordingSink recorder;                   // spy             (sink #2)
+
+  MarketDataPublisher publisher(transport); // Main Sink
+  RecordingSink recorder;                   // Secondary Sink for testing
 
   std::vector<IMarketDataSink *> sinks{&publisher, &recorder};
   FeedPump pump(queue, sequencer, sinks); // pop -> sequence -> fan out to both
 
-  // ---- act: two crossing orders ----
+  // ==================================================== //
+
   InstrumentId instrumentId = 1;
   Order order1 = {.id = 1, .price = 100, .qty = 10};
   Order order2 = {.id = 2, .price = 100, .qty = 10};
@@ -98,7 +111,4 @@ void ExchangeTest() {
   std::cout << "PASS\n";
 }
 
-int main() {
-  ExchangeTest();
-}
-
+int main() { ExchangeTest(); }

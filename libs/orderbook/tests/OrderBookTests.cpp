@@ -80,6 +80,25 @@ bool CompareBookMap(const BookSide &left, const BookSide &right) {
   return true;
 }
 
+template <typename T>
+std::vector<T> filterEvents(const std::vector<InternalEvent> &evs) {
+  std::vector<T> out;
+  for (const auto &e : evs)
+    if (const auto *p = std::get_if<T>(&e))
+      out.push_back(*p);
+  return out;
+}
+
+::testing::AssertionResult LevelEq(const LevelChangedEvent &e, Side side,
+                                   Price price, Quantity qty) {
+  if (e.side == side && e.price == price && e.totalQty == qty)
+    return ::testing::AssertionSuccess();
+  return ::testing::AssertionFailure()
+         << "expected LevelChanged{side=" << static_cast<int>(side)
+         << ", price=" << price << ", qty=" << qty
+         << "} got {side=" << static_cast<int>(e.side) << ", price=" << e.price
+         << ", qty=" << e.totalQty << "}";
+}
 } // namespace
 
 struct OrderBookTestPeer {
@@ -449,6 +468,26 @@ TEST_F(OrderBookTestFixture, CachedTotalsSurviveCancels) {
   OrderBookTestPeer::CheckLevelTotalsConsistent(book); // Ask: 100: 7
 }
 
+TEST(OrderBookLevels, FullTapeAcrossAddCancelCross) {
+  OrderBook book{1};
+  book.PlaceOrder(Side::Bid, {.id = 1, .price = 100, .qty = 10});
+  book.PlaceOrder(Side::Bid, {.id = 2, .price = 100, .qty = 5});
+  book.PlaceOrder(Side::Bid, {.id = 3, .price = 99, .qty = 8});
+  book.PlaceOrder(Side::Ask, {.id = 4, .price = 101, .qty = 12});
+  ASSERT_TRUE(book.Delete(2)); // cancel the 5 @ 100
+  book.PlaceOrder(Side::Ask,
+                  {.id = 5, .price = 100, .qty = 12}); // crosses bid 100
+
+  auto levels = filterEvents<LevelChangedEvent>(book.DrainInteralEvents());
+  ASSERT_EQ(levels.size(), 7u);
+  EXPECT_TRUE(LevelEq(levels[0], Side::Bid, 100, 10));
+  EXPECT_TRUE(LevelEq(levels[1], Side::Bid, 100, 15));
+  EXPECT_TRUE(LevelEq(levels[2], Side::Bid, 99, 8));
+  EXPECT_TRUE(LevelEq(levels[3], Side::Ask, 101, 12));
+  EXPECT_TRUE(LevelEq(levels[4], Side::Bid, 100, 10)); // cancel: 15 -> 10
+  EXPECT_TRUE(LevelEq(levels[5], Side::Bid, 100, 0));  // fill empties bid 100
+  EXPECT_TRUE(LevelEq(levels[6], Side::Ask, 100, 2));  // remainder 2 rests
+}
 // Tests to write:
 // Continous usage (read world usage):
 //  - adding, modifying, deleting, checking spread
