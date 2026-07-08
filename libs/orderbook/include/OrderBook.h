@@ -107,17 +107,17 @@ void OrderBook::AddToSide(Book &book, Side side, const Order params) {
                     .levelIter = priceLevelIter,
                     .orderIt = std::prev(priceList.end())};
 
-  OrderAddedEvent addedEvent{.instrumentId = m_instrument,
-                             .orderId = params.id,
-                             .side = side,
-                             .price = params.price,
-                             .qty = params.qty};
-
   // Updates the quantity for a given price and book side. This encapsulated the
   // change so we can also update the cached totalQty value and send out an
   // event of the change happening. ALL changes to price levels should go
   // through this function.
   AdjustLevel(side, params.price, level, params.qty);
+
+  OrderAddedEvent addedEvent{.instrumentId = m_instrument,
+                             .orderId = params.id,
+                             .side = side,
+                             .price = params.price,
+                             .qty = params.qty};
 
   m_internalEvents.push_back(addedEvent);
 }

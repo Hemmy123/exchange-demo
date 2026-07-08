@@ -138,10 +138,10 @@ bool OrderBook::Delete(const OrderId id) {
   list.erase(orderLocation.orderIt);
   m_orders_map.erase(id);
 
+  AdjustLevel(side, price, priceLevel, -qtyToRemove);
+
   m_internalEvents.push_back(
       OrderRemovedEvent{.instrumentId = m_instrument, .orderId = id});
-
-  AdjustLevel(side, price, priceLevel, -qtyToRemove);
 
   if (list.empty()) {
     auto &book = (orderLocation.side == Side::Bid) ? m_bidsMap : m_askMap;
