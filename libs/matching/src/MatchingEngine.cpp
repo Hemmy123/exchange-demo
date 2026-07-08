@@ -11,16 +11,7 @@ void MatchingEngine::PlaceOrder(InstrumentId instrument, Side side,
 
   auto &book = m_books.at(instrument);
   book.PlaceOrder(side, params);
-
-  // Note: One order can result in multiple events happening.
-  auto internalEvents = book.DrainInteralEvents();
-
-  for (auto &event : internalEvents) {
-    if (auto *tradeEvent = std::get_if<TradeEvent>(&event)) {
-      tradeEvent->tradeId = m_nextTradeId++;
-    }
-    m_internalEventsSink.Publish(event);
-  }
+  DrainEvents(book);
 }
 
 void MatchingEngine::Modify(InstrumentId instrument, OrderId id,
@@ -32,7 +23,9 @@ void MatchingEngine::Modify(InstrumentId instrument, OrderId id,
     return;
   }
 
-  m_books.at(instrument).Modify(id, price, qty);
+  auto &book = m_books.at(instrument);
+  book.Modify(id, price, qty);
+  DrainEvents(book);
 }
 
 void MatchingEngine::Delete(InstrumentId instrument, OrderId orderId) {
@@ -40,5 +33,19 @@ void MatchingEngine::Delete(InstrumentId instrument, OrderId orderId) {
     return;
   }
 
-  m_books.at(instrument).Delete(orderId);
+  auto &book = m_books.at(instrument);
+  book.Delete(orderId);
+  DrainEvents(book);
+}
+
+void MatchingEngine::DrainEvents(OrderBook &book) {
+  // Note: One order can result in multiple events happening.
+  auto internalEvents = book.DrainInteralEvents();
+
+  for (auto &event : internalEvents) {
+    if (auto *tradeEvent = std::get_if<TradeEvent>(&event)) {
+      tradeEvent->tradeId = m_nextTradeId++;
+    }
+    m_internalEventsSink.Publish(event);
+  }
 }

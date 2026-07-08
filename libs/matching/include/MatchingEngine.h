@@ -31,6 +31,9 @@ public:
   void Delete(InstrumentId instrument, OrderId id);
 
 private:
+  // Drains internal events that happened in the order book;
+  void DrainEvents(OrderBook &book);
+
   std::unordered_map<InstrumentId, OrderBook> m_books;
 
   IInteralEventSink &m_internalEventsSink;
