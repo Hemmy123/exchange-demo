@@ -52,8 +52,15 @@ std::optional<Price> OrderBook::Spread() const {
     return {};
   }
 
-  return abs(static_cast<int>(bestBid.value()) -
-             static_cast<int>(bestAsk.value()));
+  [[unlikely]]
+  if (bestBid.value() < bestAsk.value()) {
+    // ERROR: This means the order book has crossed. This shouldn't happen
+    // because matching should prevent this when new order are added in.
+    // Something bad has happened breaking the state of the order book
+    return {};
+  }
+
+  return bestBid.value() - bestAsk.value();
 }
 
 void OrderBook::PlaceOrder(const Side side, Order params) {
