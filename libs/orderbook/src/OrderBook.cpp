@@ -2,7 +2,6 @@
 #include "InternalEvents.h"
 #include "Types.h"
 
-#include <numeric>
 #include <optional>
 #include <print>
 #include <vector>
@@ -52,15 +51,12 @@ std::optional<Price> OrderBook::Spread() const {
     return {};
   }
 
-  [[unlikely]]
-  if (bestBid.value() < bestAsk.value()) {
-    // ERROR: This means the order book has crossed. This shouldn't happen
-    // because matching should prevent this when new order are added in.
-    // Something bad has happened breaking the state of the order book
+  // if (*bestAsk< *bestBid) {
+  if (bestAsk.value() < bestBid.value()) {
     return {};
   }
-
-  return bestBid.value() - bestAsk.value();
+  return bestAsk.value() - bestBid.value();
+  // return bestBid.value() - bestAsk.value();
 }
 
 void OrderBook::PlaceOrder(const Side side, Order params) {
@@ -154,11 +150,12 @@ bool OrderBook::Delete(const OrderId id) {
 std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
   const auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
 
-  if (book.contains(price) == false) {
+  auto bookIter = book.find(price);
+  if (bookIter == book.end()) {
     return {};
   }
 
-  return book.at(price).totalQty;
+  return bookIter->second.totalQty;
 }
 
 bool OrderBook::Contains(OrderId orderId) const {

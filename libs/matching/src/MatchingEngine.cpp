@@ -5,11 +5,18 @@
 void MatchingEngine::PlaceOrder(InstrumentId instrument, Side side,
                                 Order &params) {
 
-  if (m_books.contains(instrument) == false) {
-    m_books.insert({instrument, OrderBook(instrument)});
+  auto bookIter = m_books.find(instrument);
+
+  if (bookIter == m_books.end()) {
+    auto successCheck = m_books.insert({instrument, OrderBook(instrument)});
+    if (successCheck.second == false) {
+      // LOG ERROR HERE: Failed to insert into book
+      return;
+    }
+    bookIter = successCheck.first;
   }
 
-  auto &book = m_books.at(instrument);
+  auto &book = bookIter->second;
   book.PlaceOrder(side, params);
   DrainEvents(book);
 }
@@ -18,22 +25,30 @@ void MatchingEngine::Modify(InstrumentId instrument, OrderId id,
                             std::optional<Price> price,
                             std::optional<Quantity> qty) {
 
-  if (m_books.contains(instrument) == false) {
-    // TODO: Log error
-    return;
+  auto bookIter = m_books.find(instrument);
+
+  if (bookIter == m_books.end()) {
+    auto successCheck = m_books.insert({instrument, OrderBook(instrument)});
+    if (successCheck.second == false) {
+      // LOG ERROR HERE: Failed to insert into book
+      return;
+    }
+    bookIter = successCheck.first;
   }
 
-  auto &book = m_books.at(instrument);
+  auto &book = bookIter->second;
   book.Modify(id, price, qty);
   DrainEvents(book);
 }
 
 void MatchingEngine::Delete(InstrumentId instrument, OrderId orderId) {
-  if (m_books.contains(instrument) == false) {
+
+  auto bookIter = m_books.find(instrument);
+  if (bookIter == m_books.end()) {
     return;
   }
 
-  auto &book = m_books.at(instrument);
+  auto &book = bookIter->second;
   book.Delete(orderId);
   DrainEvents(book);
 }
