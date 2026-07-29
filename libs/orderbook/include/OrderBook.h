@@ -121,9 +121,8 @@ template <typename T> void PrintStruct(const T &obj) {
   template for (constexpr auto member : classMembers) {
     if (!first) {
       std::print(", ");
-      first = false;
     }
-
+    first = false;
     /*
      * - idendifier_of(...) - gets the string_view of the name of the member,
      *   as we would see it in source code
