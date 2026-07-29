@@ -30,6 +30,8 @@ public:
 
   void Delete(InstrumentId instrument, OrderId id);
 
+  void PrintOrderBook() const;
+
 private:
   // Drains internal events that happened in the order book;
   void DrainEvents(OrderBook &book);

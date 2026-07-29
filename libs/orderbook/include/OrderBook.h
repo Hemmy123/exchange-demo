@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <list>
 #include <map>
+#include <meta>
 #include <optional>
+#include <print>
 #include <unordered_map>
 #include <vector>
 
@@ -91,6 +93,51 @@ private:
 };
 
 // ====== template definitions ===== //
+
+// Some reflection fun!
+template <typename T> void PrintStruct(const T &obj) {
+  std::print("{{");
+  bool first = true;
+
+  /* A new notes:
+   * - This justs all the class members of the class that is passed in
+   * - ^^T - produces a std::meta::info for that type. i.e. gives use the
+   *   reflected object for this class
+   * - nonstatic_data_members_of will return a vector, to ensure that we have a
+   *   compiler time data structure, we wrap it in define_static_array
+   * - std::meta::access_context::current() will give us all the members that
+   *   are accessiable in the current context. If we get a struct then
+   * everything is accessible
+   */
+  static constexpr auto classMembers =
+      std::define_static_array(std::meta::nonstatic_data_members_of(
+          ^^T, std::meta::access_context::current()));
+
+  /* `template for` lets us iterate through all these reflected types.
+   * Why can't use just use a for? this is because class members holds
+   * many different types. template for will unroll this for every type
+   * that is there.
+   */
+  template for (constexpr auto member : classMembers) {
+    if (!first) {
+      std::print(", ");
+      first = false;
+    }
+
+    /*
+     * - idendifier_of(...) - gets the string_view of the name of the member,
+     *   as we would see it in source code
+     * - obj.[:member:] - obj is a a 'normal' class, where as member is a
+     *   std::meta::info, i.e. a reflected type. On this line, we want to print
+     *   the name of the member as well as the value. To get to the value
+     *   like a normal call (obj.member), we need to turn member back into
+     *   an actual member. [:member:] lets us do this.
+     *
+     */
+    std::print("{} = {} ", std::meta::identifier_of(member), obj.[:member:]);
+  }
+  std::print("}}");
+}
 
 template <typename Book>
 void OrderBook::AddToSide(Book &book, Side side, const Order params) {

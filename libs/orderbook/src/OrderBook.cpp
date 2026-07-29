@@ -51,12 +51,9 @@ std::optional<Price> OrderBook::Spread() const {
     return {};
   }
 
-  // if (*bestAsk< *bestBid) {
-  if (bestAsk.value() < bestBid.value()) {
-    return {};
-  }
+  contract_assert(bestAsk.value() >= bestBid.value());
+
   return bestAsk.value() - bestBid.value();
-  // return bestBid.value() - bestAsk.value();
 }
 
 void OrderBook::PlaceOrder(const Side side, Order order) {
@@ -172,8 +169,7 @@ void OrderBook::Print() const {
 
     std::print("Price {}: ", elem.first);
     for (const auto &order : elem.second.orders) {
-      std::print("[ID: {}, Price {}, Quantity: {}], ", order.id, order.price,
-                 order.qty);
+      PrintStruct(order);
     }
     std::print("\n");
   }
@@ -183,8 +179,7 @@ void OrderBook::Print() const {
 
     std::print("Price {}: ", elem.first);
     for (const auto &order : elem.second.orders) {
-      std::print("[ID: {}, Price {}, Quantity: {}], ", order.id, order.price,
-                 order.qty);
+      PrintStruct(order);
     }
     std::print("\n");
   }

@@ -69,9 +69,13 @@ void ExchangeTest() {
   InstrumentId instrumentId = 1;
   Order order1 = {.id = 1, .price = 100, .qty = 10};
   Order order2 = {.id = 2, .price = 100, .qty = 10};
+  Order order3 = {.id = 1, .price = 102, .qty = 10};
+  Order order4 = {.id = 2, .price = 103, .qty = 10};
 
   engine.PlaceOrder(instrumentId, Side::Bid, order1);
   engine.PlaceOrder(instrumentId, Side::Ask, order2);
+  engine.PlaceOrder(instrumentId, Side::Bid, order3);
+  engine.PlaceOrder(instrumentId, Side::Ask, order4);
 
   // Single-threaded for now: drain on this same thread.
   // (Becomes a loop on the transport thread once the real SpscRing is in.)
@@ -92,6 +96,8 @@ void ExchangeTest() {
             << " adds=" << adds << " removes=" << removes << ")\n"
             << "Publisher forwarded to transport: " << transport.sendCount
             << "\n";
+
+  engine.PrintOrderBook();
 
   // 1. something reached the sinks at all
   assert(n >= 1 && "no FeedMessages reached the sinks -- pipeline is broken");

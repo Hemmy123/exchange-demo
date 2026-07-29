@@ -64,3 +64,9 @@ void MatchingEngine::DrainEvents(OrderBook &book) {
     m_internalEventsSink.Publish(event);
   }
 }
+
+void MatchingEngine::PrintOrderBook() const {
+  for (const auto &pair : m_books) {
+    pair.second.Print();
+  }
+}

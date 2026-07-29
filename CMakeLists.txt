@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_compile_options(-fcontracts)   # experimental opt-id
+add_compile_options(-freflection)
+add_link_options(-fcontracts)      # pulls in the default handler
+
 include(FetchContent)
 FetchContent_Declare(
 	googletest
