@@ -478,7 +478,7 @@ TEST(OrderBookLevels, FullTapeAcrossAddCancelCross) {
   book.PlaceOrder(Side::Ask,
                   {.id = 5, .price = 100, .qty = 12}); // crosses bid 100
 
-  auto levels = filterEvents<LevelChangedEvent>(book.DrainInteralEvents());
+  auto levels = filterEvents<LevelChangedEvent>(book.DrainInternalEvents());
   ASSERT_EQ(levels.size(), 7u);
   EXPECT_TRUE(LevelEq(levels[0], Side::Bid, 100, 10));
   EXPECT_TRUE(LevelEq(levels[1], Side::Bid, 100, 15));

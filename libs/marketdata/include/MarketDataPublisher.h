@@ -14,5 +14,3 @@ public:
 private:
   IMarketDataTransport &m_transport;
 };
-
-///////////// scratch work /////////////////////

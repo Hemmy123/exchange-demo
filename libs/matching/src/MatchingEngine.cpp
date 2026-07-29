@@ -3,7 +3,7 @@
 #include "Types.h"
 
 void MatchingEngine::PlaceOrder(InstrumentId instrument, Side side,
-                                Order &params) {
+                                Order params) {
 
   auto bookIter = m_books.find(instrument);
 
@@ -55,7 +55,7 @@ void MatchingEngine::Delete(InstrumentId instrument, OrderId orderId) {
 
 void MatchingEngine::DrainEvents(OrderBook &book) {
   // Note: One order can result in multiple events happening.
-  auto internalEvents = book.DrainInteralEvents();
+  auto internalEvents = book.DrainInternalEvents();
 
   for (auto &event : internalEvents) {
     if (auto *tradeEvent = std::get_if<TradeEvent>(&event)) {

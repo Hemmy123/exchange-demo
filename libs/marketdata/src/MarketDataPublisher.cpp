@@ -20,7 +20,7 @@ void MarketDataPublisher::Publish(const FeedMessage &ev) {
                  marketDataEvent.body =
                      MdTrade{.price = event.restingPrice,
                              .qty = event.quantityTraded,
-                             .agressorSide = event.aggressorSide,
+                             .aggressorSide = event.aggressorSide,
                              .tradeId = event.tradeId};
                  m_transport.Send(marketDataEvent);
                },

@@ -3,7 +3,7 @@
 #include "IInternalEventSink.h"
 #include "SpscRing.h"
 
-class QueueProducer : public IInteralEventSink {
+class QueueProducer : public IInternalEventSink {
 public:
   explicit QueueProducer(InternalEventQueue &queue)
       : m_internalEventQueue(queue) {}

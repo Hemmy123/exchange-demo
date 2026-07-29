@@ -8,7 +8,7 @@
 struct MdTrade {
   Price price;
   Quantity qty;
-  Side agressorSide;
+  Side aggressorSide;
   TradeId tradeId;
 };
 

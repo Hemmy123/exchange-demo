@@ -5,7 +5,7 @@
 FeedPump::FeedPump(InternalEventQueue &internalQueue, Sequencer &sequencer,
                    std::vector<IMarketDataSink *> sinks)
     : m_internalEventQueue(internalQueue), m_sequencer(sequencer),
-      m_sinks(sinks) {}
+      m_sinks(std::move(sinks)) {}
 
 void FeedPump::Drain() {
   InternalEvent event;

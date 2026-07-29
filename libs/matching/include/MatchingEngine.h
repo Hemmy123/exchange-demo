@@ -9,12 +9,12 @@
 
 class MatchingEngine {
 public:
-  explicit MatchingEngine(IInteralEventSink &sink)
+  explicit MatchingEngine(IInternalEventSink &sink)
       : m_internalEventsSink(sink) {};
 
   // Note: OrderID is per instrument and not compaitable across instruments!
   // TODO: Order is mutated in this call. Should this be changed?
-  void PlaceOrder(InstrumentId instrument, Side side, Order &params);
+  void PlaceOrder(InstrumentId instrument, Side side, Order params);
 
   void Modify(InstrumentId instrument, OrderId id, std::optional<Price> price,
               std::optional<Quantity> qty);
@@ -36,7 +36,7 @@ private:
 
   std::unordered_map<InstrumentId, OrderBook> m_books;
 
-  IInteralEventSink &m_internalEventsSink;
+  IInternalEventSink &m_internalEventsSink;
 
   // 0 reserved for invalid
   TradeId m_nextTradeId{1};

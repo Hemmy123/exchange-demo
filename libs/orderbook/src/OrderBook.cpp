@@ -59,19 +59,19 @@ std::optional<Price> OrderBook::Spread() const {
   // return bestBid.value() - bestAsk.value();
 }
 
-void OrderBook::PlaceOrder(const Side side, Order params) {
+void OrderBook::PlaceOrder(const Side side, Order order) {
 
   if (side == Side::Ask) {
     // Bids match against opposite side (and vise versa)
-    MatchAgainstBids(params);
+    MatchAgainstBids(order);
   } else {
-    MatchAgainstAsks(params);
+    MatchAgainstAsks(order);
   }
 
   // If there is still quantity left over, then add the rest to the book
-  if (params.qty > 0) {
+  if (order.qty > 0) {
     auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
-    AddToSide(book, side, params);
+    AddToSide(book, side, order);
   }
 }
 
@@ -147,7 +147,8 @@ bool OrderBook::Delete(const OrderId id) {
   return true;
 }
 
-std::optional<Quantity> OrderBook::QuantityAtPrice(Side side, Price price) {
+std::optional<Quantity> OrderBook::QuantityAtPrice(Side side,
+                                                   Price price) const {
   const auto &book = (side == Side::Ask) ? m_askMap : m_bidsMap;
 
   auto bookIter = book.find(price);
@@ -284,7 +285,7 @@ void OrderBook::FillLevel(Side aggressorSide, Order &incoming,
   }
 }
 
-std::vector<InternalEvent> OrderBook::DrainInteralEvents() {
+std::vector<InternalEvent> OrderBook::DrainInternalEvents() {
   auto out = std::move(m_internalEvents);
   m_internalEvents.clear();
   return out;

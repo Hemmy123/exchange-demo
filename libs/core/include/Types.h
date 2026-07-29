@@ -22,8 +22,6 @@ struct Order {
 
 using OrderList = std::list<Order>;
 
-// This use used so we can cache the total quantity available at a price level.
-// This is requied to sent out level updates for each price
 struct PriceLevel {
   Quantity totalQty = 0;
   OrderList orders;

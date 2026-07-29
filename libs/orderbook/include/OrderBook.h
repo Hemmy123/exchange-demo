@@ -5,7 +5,6 @@
 #include "Utils.h"
 
 #include <cstdint>
-#include <execution>
 #include <list>
 #include <map>
 #include <optional>
@@ -27,7 +26,7 @@ public:
 
   bool Delete(const OrderId id);
 
-  void PlaceOrder(const Side side, Order params);
+  void PlaceOrder(const Side side, Order order);
 
   // Returns the bid at the highest price
   std::optional<Price> BestBid() const;
@@ -44,7 +43,7 @@ public:
   std::optional<Order> BestAskOrder() const;
 
   // Sums all the prices for a particular level
-  std::optional<Quantity> QuantityAtPrice(Side side, Price price);
+  std::optional<Quantity> QuantityAtPrice(Side side, Price price) const;
 
   // Checks if the order exists in either ask or bid side.
   bool Contains(OrderId) const;
@@ -53,7 +52,7 @@ public:
 
   void Print() const;
 
-  std::vector<InternalEvent> DrainInteralEvents();
+  std::vector<InternalEvent> DrainInternalEvents();
 
 private:
   InstrumentId m_instrument;

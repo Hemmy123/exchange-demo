@@ -5,6 +5,6 @@
 
 struct FeedMessage {
   std::uint64_t seq; // monotonic, for gap detection
-  std::chrono::system_clock::time_point timeStamp; // shared a batch of events
+  std::chrono::system_clock::time_point timeStamp;
   InternalEvent payload; // the variant: Trade / Added / Removed
 };
