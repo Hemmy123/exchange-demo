@@ -30,7 +30,7 @@ void MarketDataPublisher::Publish(const FeedMessage &ev) {
                // need to send these out for external listeners. I'm keeping the
                // internal events for reference and in case i want to update in
                // future for learning purposes
-               [&](OrderAddedEvent event) {}, [&](OrderRemovedEvent event) {},
+               [&](OrderAddedEvent) {}, [&](OrderRemovedEvent) {},
 
                [&](LevelChangedEvent event) {
                  marketDataEvent.instrumentId = event.instrumentId;
